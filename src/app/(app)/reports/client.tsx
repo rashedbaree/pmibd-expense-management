@@ -107,7 +107,7 @@ export default function ReportsClient({
         <button
           type="button"
           onClick={() => window.print()}
-          className="print:hidden rounded-md bg-zinc-950 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-950"
+          className="print:hidden rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
         >
           Print / Save as PDF
         </button>

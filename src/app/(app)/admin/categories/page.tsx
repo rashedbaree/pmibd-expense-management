@@ -60,7 +60,7 @@ export default async function AdminCategoriesPage() {
             </option>
           ))}
         </select>
-        <button className="rounded-md bg-zinc-950 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-950">
+        <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90">
           Add
         </button>
       </form>

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { actOnExpense, markAsPaid } from "./actions";
+import { COMMENT_MAX_LENGTH } from "@/lib/constants";
 
 export default async function ApprovalsPage({
   searchParams,
@@ -154,6 +155,7 @@ export default async function ApprovalsPage({
                   <input
                     name="comment"
                     type="text"
+                    maxLength={COMMENT_MAX_LENGTH}
                     className="rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </label>

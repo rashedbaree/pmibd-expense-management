@@ -84,7 +84,7 @@ export default async function ExpensesPage({
         </h1>
         <Link
           href="/expenses/new"
-          className="rounded-md bg-zinc-950 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-950"
+          className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
         >
           New Expense
         </Link>
@@ -231,7 +231,12 @@ export default async function ExpensesPage({
                 <td className="px-3 py-2 whitespace-nowrap">
                   {e.category?.name}
                 </td>
-                <td className="px-3 py-2">{e.description}</td>
+                <td
+                  className="max-w-xs truncate px-3 py-2"
+                  title={e.description}
+                >
+                  {e.description}
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {e.submitter?.name}
                 </td>

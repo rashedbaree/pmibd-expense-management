@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { APPROVAL_CHAIN } from "@/lib/approval";
+import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 import type { UserRole } from "@/lib/types";
 
 export async function createExpense(formData: FormData) {
@@ -16,25 +17,30 @@ export async function createExpense(formData: FormData) {
   const portfolio_id = formData.get("portfolio_id") as string;
   const event_id = (formData.get("event_id") as string) || null;
   const category_id = formData.get("category_id") as string;
-  const description = formData.get("description") as string;
+  const description = (formData.get("description") as string).slice(
+    0,
+    DESCRIPTION_MAX_LENGTH,
+  );
   const vendor = (formData.get("vendor") as string) || null;
   const payment_method = formData.get("payment_method") as string;
   const amount = Number(formData.get("amount"));
-  const remarks = (formData.get("remarks") as string) || null;
+  const remarksRaw = (formData.get("remarks") as string) || null;
+  const remarks = remarksRaw ? remarksRaw.slice(0, REMARKS_MAX_LENGTH) : null;
   const files = formData
     .getAll("document")
     .filter((f): f is File => f instanceof File && f.size > 0);
 
-  const { data: matrixRows } = await supabase
-    .from("approval_matrix")
-    .select("min_amount, max_amount, required_role")
-    .lte("min_amount", amount)
-    .order("min_amount", { ascending: false });
+  const { data: submitterProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
 
-  const tier = matrixRows?.find(
-    (r) => r.max_amount === null || amount <= r.max_amount,
-  );
-  const required_approval_role: UserRole = tier?.required_role ?? "president";
+  const required_approval_role: UserRole = "president";
+  const current_approver_role: UserRole =
+    submitterProfile?.role === "finance_director"
+      ? "president"
+      : APPROVAL_CHAIN[0];
 
   const { data: expense, error } = await supabase
     .from("expenses")
@@ -51,7 +57,7 @@ export async function createExpense(formData: FormData) {
       status: "pending_approval",
       submitted_by: user.id,
       required_approval_role,
-      current_approver_role: APPROVAL_CHAIN[0],
+      current_approver_role,
     })
     .select()
     .single();

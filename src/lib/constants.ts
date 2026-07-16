@@ -1,0 +1,3 @@
+export const DESCRIPTION_MAX_LENGTH = 200;
+export const REMARKS_MAX_LENGTH = 200;
+export const COMMENT_MAX_LENGTH = 100;

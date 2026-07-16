@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { nextApproverRole } from "@/lib/approval";
+import { COMMENT_MAX_LENGTH } from "@/lib/constants";
 import type { ExpenseStatus, UserRole } from "@/lib/types";
 
 export async function actOnExpense(formData: FormData) {
@@ -15,7 +16,8 @@ export async function actOnExpense(formData: FormData) {
 
   const expenseId = formData.get("expense_id") as string;
   const intent = formData.get("intent") as "approve" | "reject" | "return";
-  const comment = (formData.get("comment") as string) || null;
+  const commentRaw = (formData.get("comment") as string) || null;
+  const comment = commentRaw ? commentRaw.slice(0, COMMENT_MAX_LENGTH) : null;
 
   const { data: profile } = await supabase
     .from("users")

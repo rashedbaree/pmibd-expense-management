@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { EventRow, ExpenseCategory, Portfolio } from "@/lib/types";
+import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
 const PAYMENT_METHODS = [
   { value: "cheque", label: "Cheque" },
@@ -11,6 +12,9 @@ const PAYMENT_METHODS = [
 
 const inputClass =
   "rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+
+const MAX_FILE_SIZE_MB = 4;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export default function NewExpenseForm({
   action,
@@ -26,6 +30,22 @@ export default function NewExpenseForm({
   vendors: string[];
 }) {
   const [portfolioId, setPortfolioId] = useState("");
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [descriptionLength, setDescriptionLength] = useState(0);
+  const [remarksLength, setRemarksLength] = useState(0);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const oversized = files.filter((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversized.length > 0) {
+      setFileError(
+        `${oversized.map((f) => f.name).join(", ")} ${oversized.length === 1 ? "is" : "are"} over the ${MAX_FILE_SIZE_MB}MB limit per file. Please choose smaller files.`,
+      );
+      e.target.value = "";
+      return;
+    }
+    setFileError(null);
+  }
 
   const filteredEvents = useMemo(
     () => events.filter((e) => !portfolioId || e.portfolio_id === portfolioId),
@@ -156,8 +176,17 @@ export default function NewExpenseForm({
           type="file"
           accept="image/*,.pdf"
           multiple
+          onChange={handleFileChange}
           className={inputClass}
         />
+        <span className="text-xs text-zinc-500">
+          Up to {MAX_FILE_SIZE_MB}MB per file.
+        </span>
+        {fileError && (
+          <span className="text-xs text-red-600 dark:text-red-400">
+            {fileError}
+          </span>
+        )}
       </label>
 
       <label className="flex flex-col gap-1 text-sm sm:col-span-2">
@@ -166,19 +195,33 @@ export default function NewExpenseForm({
           name="description"
           required
           rows={3}
+          maxLength={DESCRIPTION_MAX_LENGTH}
+          onChange={(e) => setDescriptionLength(e.target.value.length)}
           className={inputClass}
         />
+        <span className="text-xs text-zinc-500">
+          {descriptionLength}/{DESCRIPTION_MAX_LENGTH}
+        </span>
       </label>
 
       <label className="flex flex-col gap-1 text-sm sm:col-span-2">
         Remarks
-        <textarea name="remarks" rows={2} className={inputClass} />
+        <textarea
+          name="remarks"
+          rows={2}
+          maxLength={REMARKS_MAX_LENGTH}
+          onChange={(e) => setRemarksLength(e.target.value.length)}
+          className={inputClass}
+        />
+        <span className="text-xs text-zinc-500">
+          {remarksLength}/{REMARKS_MAX_LENGTH}
+        </span>
       </label>
 
       <div className="sm:col-span-2">
         <button
           type="submit"
-          className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-950"
+          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90"
         >
           Submit Expense
         </button>

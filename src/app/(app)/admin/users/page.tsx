@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { AccessDenied } from "@/components/AccessDenied";
-import { updateUser } from "../actions";
+import { addUser, updateUser } from "../actions";
 import type { AppUser, Portfolio, UserRole } from "@/lib/types";
 
 const ROLES: UserRole[] = [
@@ -43,6 +43,74 @@ export default async function AdminUsersPage() {
         Users). Once created, add their name/email/role here so they can be
         routed through approvals.
       </p>
+
+      <form
+        action={addUser}
+        className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800"
+      >
+        <label className="flex flex-col gap-1">
+          Auth User UID
+          <input
+            name="id"
+            required
+            placeholder="from Supabase Authentication → Users"
+            className="w-72 rounded-md border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          Name
+          <input
+            name="name"
+            required
+            className="rounded-md border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          Email
+          <input
+            name="email"
+            type="email"
+            required
+            className="rounded-md border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          Role
+          <select
+            name="role"
+            required
+            defaultValue=""
+            className="rounded-md border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="" disabled>
+              Select role
+            </option>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          Portfolio
+          <select
+            name="portfolio_id"
+            defaultValue=""
+            className="rounded-md border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="">None</option>
+            {((portfolios ?? []) as Portfolio[]).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="rounded-md bg-brand px-3 py-1.5 font-medium text-white hover:bg-brand/90">
+          Add
+        </button>
+      </form>
 
       <div className="mt-4 flex flex-col gap-3">
         {((users ?? []) as AppUser[]).map((u) => (

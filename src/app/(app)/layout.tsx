@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./actions";
@@ -22,17 +23,27 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="print:hidden flex items-center justify-between border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
+      <header className="print:hidden flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-3">
         <div className="flex items-center gap-6">
-          <span className="font-semibold text-zinc-950 dark:text-zinc-50">
-            PMIBD Expense Management
-          </span>
-          <nav className="flex gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image
+              src="/pmibd-logo.svg"
+              alt="PMI Bangladesh Chapter"
+              width={111}
+              height={43}
+              className="h-8 w-auto"
+              priority
+            />
+            <span className="hidden text-xs tracking-wide text-zinc-400 uppercase sm:inline">
+              Expense Management
+            </span>
+          </Link>
+          <nav className="flex gap-4 border-l border-zinc-200 pl-6 text-sm text-zinc-600">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="hover:text-zinc-950 dark:hover:text-zinc-50"
+                className="hover:text-zinc-950"
               >
                 {item.label}
               </Link>
@@ -40,13 +51,11 @@ export default async function AppLayout({
           </nav>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">
-            {user?.email}
-          </span>
+          <span className="text-zinc-600">{user?.email}</span>
           <form action={signOut}>
             <button
               type="submit"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100"
             >
               Sign out
             </button>

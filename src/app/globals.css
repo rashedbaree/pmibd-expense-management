@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f5f0;
+  --foreground: #200f3b;
 }
 
 @theme inline {
@@ -10,12 +10,33 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* PMI Bangladesh Chapter brand colors (pmibdchapter.org) */
+  --color-brand: #4f17a8;
+  --color-brand-accent: #ff6f00;
+  --color-brand-deep: #100522;
+
+  /* Neutral scale retinted to the brand's warm cream / deep purple ink,
+     replacing Tailwind's default gray so every zinc-* utility already
+     used across the app (borders, muted text, cards, buttons) picks up
+     the brand palette automatically. */
+  --color-zinc-50: #f8f5f0;
+  --color-zinc-100: #f1ece3;
+  --color-zinc-200: #d0ccc3;
+  --color-zinc-300: #bab19f;
+  --color-zinc-400: #9c8fae;
+  --color-zinc-500: #7d6f95;
+  --color-zinc-600: #5d5171;
+  --color-zinc-700: #493d5c;
+  --color-zinc-800: #32264a;
+  --color-zinc-900: #26123f;
+  --color-zinc-950: #200f3b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #100522;
+    --foreground: #f8f5f0;
   }
 }
 

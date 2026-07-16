@@ -38,7 +38,7 @@ export default async function AdminPortfoliosPage() {
           placeholder="New portfolio name"
           className="flex-1 rounded-md border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
-        <button className="rounded-md bg-zinc-950 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-950">
+        <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90">
           Add
         </button>
       </form>

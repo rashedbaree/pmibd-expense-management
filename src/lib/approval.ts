@@ -1,10 +1,6 @@
 import type { UserRole } from "./types";
 
-export const APPROVAL_CHAIN: UserRole[] = [
-  "portfolio_director",
-  "finance_director",
-  "president",
-];
+export const APPROVAL_CHAIN: UserRole[] = ["finance_director", "president"];
 
 export function nextApproverRole(
   current: UserRole,

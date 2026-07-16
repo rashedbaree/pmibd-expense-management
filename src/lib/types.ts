@@ -45,13 +45,6 @@ export interface AppUser {
   is_active: boolean;
 }
 
-export interface ApprovalMatrixRow {
-  id: string;
-  min_amount: number;
-  max_amount: number | null;
-  required_role: UserRole;
-}
-
 export interface Expense {
   id: string;
   date: string;

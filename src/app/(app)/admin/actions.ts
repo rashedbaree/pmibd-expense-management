@@ -18,6 +18,21 @@ export async function updateUser(formData: FormData) {
   revalidatePath("/admin/users");
 }
 
+export async function addUser(formData: FormData) {
+  const supabase = await createClient();
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const role = formData.get("role") as string;
+  const portfolio_id = (formData.get("portfolio_id") as string) || null;
+
+  await supabase
+    .from("users")
+    .insert({ id, name, email, role, portfolio_id, is_active: true });
+
+  revalidatePath("/admin/users");
+}
+
 export async function addPortfolio(formData: FormData) {
   const supabase = await createClient();
   const name = formData.get("name") as string;
@@ -61,25 +76,4 @@ export async function deleteEvent(formData: FormData) {
   const id = formData.get("id") as string;
   await supabase.from("events").delete().eq("id", id);
   revalidatePath("/admin/events");
-}
-
-export async function addApprovalMatrixRow(formData: FormData) {
-  const supabase = await createClient();
-  const min_amount = Number(formData.get("min_amount"));
-  const maxRaw = formData.get("max_amount") as string;
-  const max_amount = maxRaw ? Number(maxRaw) : null;
-  const required_role = formData.get("required_role") as string;
-
-  await supabase
-    .from("approval_matrix")
-    .insert({ min_amount, max_amount, required_role });
-
-  revalidatePath("/admin/approval-matrix");
-}
-
-export async function deleteApprovalMatrixRow(formData: FormData) {
-  const supabase = await createClient();
-  const id = formData.get("id") as string;
-  await supabase.from("approval_matrix").delete().eq("id", id);
-  revalidatePath("/admin/approval-matrix");
 }

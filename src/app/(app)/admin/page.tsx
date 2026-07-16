@@ -7,7 +7,6 @@ const SECTIONS = [
   { href: "/admin/portfolios", label: "Portfolios", desc: "Add or remove portfolios" },
   { href: "/admin/categories", label: "Expense Categories", desc: "Categories and subcategories" },
   { href: "/admin/events", label: "Events", desc: "Events / initiatives tied to a portfolio" },
-  { href: "/admin/approval-matrix", label: "Approval Matrix", desc: "Amount thresholds and required roles" },
 ];
 
 export default async function AdminPage() {
