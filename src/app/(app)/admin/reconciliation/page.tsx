@@ -4,6 +4,7 @@ import { AccessDenied } from "@/components/AccessDenied";
 import { importBankStatement, importExpenses } from "./actions";
 import ExpenseImportForm from "./expense-import-form";
 import BankImportForm from "./bank-import-form";
+import ReconcileReport from "./reconcile-report";
 
 const EXPENSE_SAMPLE_CSV = `date,portfolio,category,event,description,vendor,payment_method,amount,remarks,submitted_by,cheque_number,entry_type
 1-Jul-25,Finance & Audit,Miscellaneous,,Office supplies,ABC Traders,cheque,1500,,,000123,
@@ -12,10 +13,6 @@ const EXPENSE_SAMPLE_CSV = `date,portfolio,category,event,description,vendor,pay
 const BANK_SAMPLE_CSV = `date,cheque_number,amount,description,remarks
 3-Jul-25,000123,1500,ABC TRADERS,cleared
 10-Aug-25,000145,2200,XYZ VENUE LTD,`;
-
-function formatAmount(n: number) {
-  return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 });
-}
 
 type ExpenseRow = {
   id: string;
@@ -248,150 +245,11 @@ export default async function AdminReconciliationPage({
         <BankImportForm action={importBankStatement} />
       </section>
 
-      <section>
-        <h2 className="font-medium text-zinc-950 dark:text-zinc-50">
-          3. Reconciliation
-        </h2>
-
-        <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-          <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-            <thead className="bg-zinc-50 text-left text-xs uppercase text-zinc-500 dark:bg-zinc-900">
-              <tr>
-                <th className="px-3 py-2">Cheque #</th>
-                <th className="px-3 py-2">Expense Date</th>
-                <th className="px-3 py-2">Expense Description</th>
-                <th className="px-3 py-2 text-right">Expense Amount</th>
-                <th className="px-3 py-2">Bank Date</th>
-                <th className="px-3 py-2 text-right">Bank Amount</th>
-                <th className="px-3 py-2 text-right">Delta</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {matched.map(({ cheque, expense, bank }) => {
-                const delta = Number(expense.amount) - Number(bank.amount);
-                return (
-                  <tr key={`${cheque}-${expense.id}-${bank.id}`}>
-                    <td className="px-3 py-2 whitespace-nowrap font-medium">
-                      {cheque}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{expense.date}</td>
-                    <td className="max-w-xs truncate px-3 py-2" title={expense.description}>
-                      {expense.description}
-                    </td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap">
-                      {formatAmount(expense.amount)}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{bank.date}</td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap">
-                      {formatAmount(bank.amount)}
-                    </td>
-                    <td
-                      className={`px-3 py-2 text-right whitespace-nowrap ${
-                        delta !== 0
-                          ? "font-medium text-red-600 dark:text-red-400"
-                          : "text-emerald-600 dark:text-emerald-400"
-                      }`}
-                    >
-                      {formatAmount(delta)}
-                    </td>
-                  </tr>
-                );
-              })}
-              {matched.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-zinc-500">
-                    No matched cheques yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div>
-            <h3 className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
-              Expenses with no matching bank line ({unmatchedExpenses.length})
-            </h3>
-            <div className="mt-2 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-              <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-                <thead className="bg-zinc-50 text-left text-xs uppercase text-zinc-500 dark:bg-zinc-900">
-                  <tr>
-                    <th className="px-3 py-2">Cheque #</th>
-                    <th className="px-3 py-2">Date</th>
-                    <th className="px-3 py-2">Description</th>
-                    <th className="px-3 py-2 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {unmatchedExpenses.map((e) => (
-                    <tr key={e.id}>
-                      <td className="px-3 py-2 whitespace-nowrap font-medium">
-                        {e.cheque_number}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{e.date}</td>
-                      <td className="max-w-[10rem] truncate px-3 py-2" title={e.description}>
-                        {e.description}
-                      </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        {formatAmount(e.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                  {unmatchedExpenses.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-3 py-6 text-center text-zinc-500">
-                        None — every cheque expense has cleared.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
-              Bank lines with no matching expense ({unmatchedBank.length})
-            </h3>
-            <div className="mt-2 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-              <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
-                <thead className="bg-zinc-50 text-left text-xs uppercase text-zinc-500 dark:bg-zinc-900">
-                  <tr>
-                    <th className="px-3 py-2">Cheque #</th>
-                    <th className="px-3 py-2">Date</th>
-                    <th className="px-3 py-2">Description</th>
-                    <th className="px-3 py-2 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {unmatchedBank.map((b) => (
-                    <tr key={b.id}>
-                      <td className="px-3 py-2 whitespace-nowrap font-medium">
-                        {b.cheque_number}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{b.date}</td>
-                      <td className="max-w-[10rem] truncate px-3 py-2" title={b.description ?? undefined}>
-                        {b.description ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        {formatAmount(b.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                  {unmatchedBank.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-3 py-6 text-center text-zinc-500">
-                        None — every bank cheque has a matching expense.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ReconcileReport
+        matched={matched}
+        unmatchedExpenses={unmatchedExpenses}
+        unmatchedBank={unmatchedBank}
+      />
     </div>
   );
 }
