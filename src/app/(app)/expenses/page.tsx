@@ -45,7 +45,7 @@ export default async function ExpensesPage({
   let query = supabase
     .from("expenses")
     .select(
-      `id, date, amount, status, description, vendor,
+      `id, date, amount, status, description, vendor, cheque_number, entry_type,
        portfolio:portfolios(name),
        category:expense_categories(name),
        submitter:users!expenses_submitted_by_fkey(name)`,
@@ -70,6 +70,8 @@ export default async function ExpensesPage({
         status: ExpenseStatus;
         description: string;
         vendor: string | null;
+        cheque_number: string | null;
+        entry_type: "expense" | "reversal";
         portfolio: { name: string } | null;
         category: { name: string } | null;
         submitter: { name: string } | null;
@@ -216,6 +218,7 @@ export default async function ExpensesPage({
               <th className="px-3 py-2">Portfolio</th>
               <th className="px-3 py-2">Category</th>
               <th className="px-3 py-2">Description</th>
+              <th className="px-3 py-2">Cheque #</th>
               <th className="px-3 py-2">Submitter</th>
               <th className="px-3 py-2 text-right">Amount</th>
               <th className="px-3 py-2">Status</th>
@@ -235,12 +238,21 @@ export default async function ExpensesPage({
                   className="max-w-xs truncate px-3 py-2"
                   title={e.description}
                 >
+                  {e.entry_type === "reversal" && (
+                    <span className="mr-1 inline-flex rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-950 dark:text-orange-400">
+                      Reversal
+                    </span>
+                  )}
                   {e.description}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {e.cheque_number ?? "—"}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {e.submitter?.name}
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
+                  {e.entry_type === "reversal" ? "−" : ""}
                   {Number(e.amount).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                   })}
@@ -252,7 +264,7 @@ export default async function ExpensesPage({
             ))}
             {(expenses ?? []).length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-zinc-500">
+                <td colSpan={8} className="px-3 py-6 text-center text-zinc-500">
                   No expenses found.
                 </td>
               </tr>

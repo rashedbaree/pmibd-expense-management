@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ExpenseStatus } from "@/lib/types";
+import type { EntryType, ExpenseStatus } from "@/lib/types";
 
 type Row = {
   id: string;
   date: string;
   amount: number;
   status: ExpenseStatus;
+  entry_type: EntryType;
   portfolio: { name: string } | null;
   category: { name: string } | null;
 };
@@ -14,13 +15,17 @@ function formatAmount(n: number) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2 });
 }
 
+function signedAmount(e: Row) {
+  return e.entry_type === "reversal" ? -Number(e.amount) : Number(e.amount);
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
   const { data: raw } = await supabase
     .from("expenses")
     .select(
-      `id, date, amount, status,
+      `id, date, amount, status, entry_type,
        portfolio:portfolios(name),
        category:expense_categories(name)`,
     );
@@ -28,7 +33,7 @@ export default async function DashboardPage() {
   const expenses = (raw ?? []) as unknown as Row[];
 
   const totalCount = expenses.length;
-  const totalAmount = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalAmount = expenses.reduce((sum, e) => sum + signedAmount(e), 0);
   const pending = expenses.filter((e) => e.status === "pending_approval");
   const approved = expenses.filter(
     (e) => e.status === "approved" || e.status === "paid",
@@ -41,18 +46,18 @@ export default async function DashboardPage() {
 
   for (const e of expenses) {
     const month = e.date.slice(0, 7);
-    monthly.set(month, (monthly.get(month) ?? 0) + Number(e.amount));
+    monthly.set(month, (monthly.get(month) ?? 0) + signedAmount(e));
 
     const portfolioName = e.portfolio?.name ?? "Unassigned";
     byPortfolio.set(
       portfolioName,
-      (byPortfolio.get(portfolioName) ?? 0) + Number(e.amount),
+      (byPortfolio.get(portfolioName) ?? 0) + signedAmount(e),
     );
 
     const categoryName = e.category?.name ?? "Uncategorized";
     byCategory.set(
       categoryName,
-      (byCategory.get(categoryName) ?? 0) + Number(e.amount),
+      (byCategory.get(categoryName) ?? 0) + signedAmount(e),
     );
   }
 
@@ -64,9 +69,9 @@ export default async function DashboardPage() {
 
   const tiles = [
     { label: "Total Expenses", value: totalCount, sub: `${formatAmount(totalAmount)} BDT` },
-    { label: "Pending Approval", value: pending.length, sub: `${formatAmount(pending.reduce((s, e) => s + Number(e.amount), 0))} BDT` },
-    { label: "Approved / Paid", value: approved.length, sub: `${formatAmount(approved.reduce((s, e) => s + Number(e.amount), 0))} BDT` },
-    { label: "Rejected", value: rejected.length, sub: `${formatAmount(rejected.reduce((s, e) => s + Number(e.amount), 0))} BDT` },
+    { label: "Pending Approval", value: pending.length, sub: `${formatAmount(pending.reduce((s, e) => s + signedAmount(e), 0))} BDT` },
+    { label: "Approved / Paid", value: approved.length, sub: `${formatAmount(approved.reduce((s, e) => s + signedAmount(e), 0))} BDT` },
+    { label: "Rejected", value: rejected.length, sub: `${formatAmount(rejected.reduce((s, e) => s + signedAmount(e), 0))} BDT` },
   ];
 
   return (

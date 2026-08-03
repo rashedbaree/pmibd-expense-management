@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ExpenseStatus } from "@/lib/types";
+import type { EntryType, ExpenseStatus } from "@/lib/types";
 import ReportsClient from "./client";
 
 type Row = {
@@ -7,10 +7,15 @@ type Row = {
   date: string;
   amount: number;
   status: ExpenseStatus;
+  entry_type: EntryType;
   portfolio: { name: string } | null;
   category: { name: string } | null;
   event: { name: string } | null;
 };
+
+function signedAmount(e: Row) {
+  return e.entry_type === "reversal" ? -Number(e.amount) : Number(e.amount);
+}
 
 export default async function ReportsPage() {
   const supabase = await createClient();
@@ -18,7 +23,7 @@ export default async function ReportsPage() {
   const { data: raw } = await supabase
     .from("expenses")
     .select(
-      `id, date, amount, status,
+      `id, date, amount, status, entry_type,
        portfolio:portfolios(name),
        category:expense_categories(name),
        event:events(name)`,
@@ -33,7 +38,7 @@ export default async function ReportsPage() {
       const k = key(e);
       const entry = map.get(k) ?? { count: 0, amount: 0 };
       entry.count += 1;
-      entry.amount += Number(e.amount);
+      entry.amount += signedAmount(e);
       map.set(k, entry);
     }
     return [...map.entries()]

@@ -16,6 +16,8 @@ export type ExpenseStatus =
 
 export type PaymentMethod = "cheque" | "bank_transfer" | "cash";
 
+export type EntryType = "expense" | "reversal";
+
 export type ApprovalAction = "approve" | "reject" | "return" | "comment";
 
 export interface Portfolio {
@@ -58,6 +60,8 @@ export interface Expense {
   status: ExpenseStatus;
   submitted_by: string;
   remarks: string | null;
+  cheque_number: string | null;
+  entry_type: EntryType;
   required_approval_role: UserRole | null;
   current_approver_role: UserRole | null;
   created_at: string;
