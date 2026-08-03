@@ -67,6 +67,16 @@ export interface Expense {
   created_at: string;
 }
 
+export interface BankStatementLine {
+  id: string;
+  date: string;
+  cheque_number: string;
+  amount: number;
+  description: string | null;
+  remarks: string | null;
+  created_at: string;
+}
+
 export interface ExpenseApproval {
   id: string;
   expense_id: string;

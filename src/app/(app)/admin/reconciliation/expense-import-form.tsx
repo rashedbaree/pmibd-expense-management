@@ -5,7 +5,7 @@ import { IMPORT_MAX_FILE_SIZE_MB } from "@/lib/constants";
 
 const MAX_FILE_SIZE_BYTES = IMPORT_MAX_FILE_SIZE_MB * 1024 * 1024;
 
-export default function ImportForm({
+export default function ExpenseImportForm({
   action,
 }: {
   action: (formData: FormData) => void;
@@ -25,7 +25,7 @@ export default function ImportForm({
   }
 
   return (
-    <form action={action} className="mt-6 max-w-md">
+    <form action={action} className="mt-4 max-w-md">
       <label className="flex flex-col gap-1 text-sm">
         CSV or Excel file
         <input

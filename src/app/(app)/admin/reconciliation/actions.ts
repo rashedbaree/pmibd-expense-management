@@ -14,7 +14,7 @@ import type { EntryType, PaymentMethod } from "@/lib/types";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["cheque", "bank_transfer", "cash"];
 const ENTRY_TYPES: EntryType[] = ["expense", "reversal"];
-const REQUIRED_COLUMNS = [
+const EXPENSE_REQUIRED_COLUMNS = [
   "date",
   "portfolio",
   "category",
@@ -22,6 +22,7 @@ const REQUIRED_COLUMNS = [
   "payment_method",
   "amount",
 ];
+const BANK_REQUIRED_COLUMNS = ["date", "cheque_number", "amount"];
 const MAX_REPORTED_ERRORS = 20;
 
 const MONTHS: Record<string, string> = {
@@ -57,40 +58,58 @@ function normalize(value: unknown): string {
   return String(value ?? "").trim();
 }
 
-function redirectWithError(message: string): never {
-  redirect(`/admin/import?error=${encodeURIComponent(message)}`);
+function redirectWithError(source: "expenses" | "bank", message: string): never {
+  redirect(
+    `/admin/reconciliation?source=${source}&error=${encodeURIComponent(message)}`,
+  );
 }
 
-export async function importExpenses(formData: FormData) {
-  const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") {
-    redirectWithError("Only administrators can import expenses.");
-  }
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    redirectWithError("Please choose a CSV or Excel file.");
-  }
-
+async function readWorkbookRows(file: File) {
   const isCsv = file.name.toLowerCase().endsWith(".csv");
   const workbook = isCsv
     ? XLSX.read(await file.text(), { type: "string" })
     : XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: "array" });
 
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+  return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
     defval: "",
     raw: false,
   });
+}
 
+function lowerKeyedRow(rawRow: Record<string, unknown>) {
+  const row: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rawRow)) {
+    row[key.trim().toLowerCase()] = value;
+  }
+  return row;
+}
+
+export async function importExpenses(formData: FormData) {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "admin") {
+    redirectWithError("expenses", "Only administrators can import expenses.");
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirectWithError("expenses", "Please choose a CSV or Excel file.");
+  }
+
+  const rawRows = await readWorkbookRows(file);
   if (rawRows.length === 0) {
-    redirectWithError("The file has no data rows.");
+    redirectWithError("expenses", "The file has no data rows.");
   }
 
   const headerKeys = Object.keys(rawRows[0]).map((k) => k.trim().toLowerCase());
-  const missingColumns = REQUIRED_COLUMNS.filter((c) => !headerKeys.includes(c));
+  const missingColumns = EXPENSE_REQUIRED_COLUMNS.filter(
+    (c) => !headerKeys.includes(c),
+  );
   if (missingColumns.length > 0) {
-    redirectWithError(`Missing required column(s): ${missingColumns.join(", ")}`);
+    redirectWithError(
+      "expenses",
+      `Missing required column(s): ${missingColumns.join(", ")}`,
+    );
   }
 
   const supabase = await createClient();
@@ -127,10 +146,7 @@ export async function importExpenses(formData: FormData) {
 
   rawRows.forEach((rawRow, index) => {
     const rowNum = index + 2; // +1 for 0-index, +1 for the header row
-    const row: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(rawRow)) {
-      row[key.trim().toLowerCase()] = value;
-    }
+    const row = lowerKeyedRow(rawRow);
 
     const dateRaw = normalize(row.date);
     const portfolioName = normalize(row.portfolio);
@@ -261,8 +277,10 @@ export async function importExpenses(formData: FormData) {
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
+  revalidatePath("/admin/reconciliation");
 
   const params = new URLSearchParams();
+  params.set("source", "expenses");
   params.set("created", String(createdCount));
   if (errors.length > 0) {
     params.set("errors", errors.slice(0, MAX_REPORTED_ERRORS).join("|"));
@@ -270,5 +288,99 @@ export async function importExpenses(formData: FormData) {
       params.set("moreErrors", String(errors.length - MAX_REPORTED_ERRORS));
     }
   }
-  redirect(`/admin/import?${params.toString()}`);
+  redirect(`/admin/reconciliation?${params.toString()}`);
+}
+
+export async function importBankStatement(formData: FormData) {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "admin") {
+    redirectWithError("bank", "Only administrators can import bank statements.");
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirectWithError("bank", "Please choose a CSV or Excel file.");
+  }
+
+  const rawRows = await readWorkbookRows(file);
+  if (rawRows.length === 0) {
+    redirectWithError("bank", "The file has no data rows.");
+  }
+
+  const headerKeys = Object.keys(rawRows[0]).map((k) => k.trim().toLowerCase());
+  const missingColumns = BANK_REQUIRED_COLUMNS.filter((c) => !headerKeys.includes(c));
+  if (missingColumns.length > 0) {
+    redirectWithError(
+      "bank",
+      `Missing required column(s): ${missingColumns.join(", ")}`,
+    );
+  }
+
+  const supabase = await createClient();
+  const toInsert: Record<string, unknown>[] = [];
+  const errors: string[] = [];
+
+  rawRows.forEach((rawRow, index) => {
+    const rowNum = index + 2;
+    const row = lowerKeyedRow(rawRow);
+
+    const dateRaw = normalize(row.date);
+    const chequeNumberRaw = normalize(row.cheque_number);
+    const amountRaw = normalize(row.amount);
+
+    if (!dateRaw || !chequeNumberRaw || !amountRaw) {
+      errors.push(`Row ${rowNum}: missing a required field.`);
+      return;
+    }
+
+    const date = parseImportDate(dateRaw);
+    if (!date) {
+      errors.push(`Row ${rowNum}: unrecognized date "${dateRaw}".`);
+      return;
+    }
+
+    const amount = Number(amountRaw);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      errors.push(`Row ${rowNum}: invalid amount "${amountRaw}".`);
+      return;
+    }
+
+    const description = normalize(row.description) || null;
+    const remarks = normalize(row.remarks) || null;
+
+    toInsert.push({
+      date,
+      cheque_number: chequeNumberRaw.slice(0, CHEQUE_NUMBER_MAX_LENGTH),
+      amount,
+      description,
+      remarks,
+    });
+  });
+
+  let createdCount = 0;
+  if (toInsert.length > 0) {
+    const { data: inserted, error } = await supabase
+      .from("bank_statement_lines")
+      .insert(toInsert)
+      .select("id");
+
+    if (error) {
+      errors.unshift(`Import failed: ${error.message}`);
+    } else {
+      createdCount = inserted?.length ?? 0;
+    }
+  }
+
+  revalidatePath("/admin/reconciliation");
+
+  const params = new URLSearchParams();
+  params.set("source", "bank");
+  params.set("created", String(createdCount));
+  if (errors.length > 0) {
+    params.set("errors", errors.slice(0, MAX_REPORTED_ERRORS).join("|"));
+    if (errors.length > MAX_REPORTED_ERRORS) {
+      params.set("moreErrors", String(errors.length - MAX_REPORTED_ERRORS));
+    }
+  }
+  redirect(`/admin/reconciliation?${params.toString()}`);
 }
