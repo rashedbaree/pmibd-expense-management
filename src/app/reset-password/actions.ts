@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
+import { validatePassword } from "@/lib/password";
 
 export async function updatePassword(formData: FormData) {
   const password = formData.get("password") as string;
@@ -11,10 +11,10 @@ export async function updatePassword(formData: FormData) {
   if (password !== confirmPassword) {
     redirect("/reset-password?error=Passwords+do+not+match");
   }
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    redirect(
-      `/reset-password?error=Password+must+be+at+least+${MIN_PASSWORD_LENGTH}+characters`,
-    );
+
+  const validationError = validatePassword(password);
+  if (validationError) {
+    redirect(`/reset-password?error=${encodeURIComponent(validationError)}`);
   }
 
   const supabase = await createClient();
