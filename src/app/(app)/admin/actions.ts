@@ -77,3 +77,20 @@ export async function deleteEvent(formData: FormData) {
   await supabase.from("events").delete().eq("id", id);
   revalidatePath("/admin/events");
 }
+
+export async function updatePortfolioVisibility(formData: FormData) {
+  const supabase = await createClient();
+  const id = formData.get("id") as string;
+  const full_visibility = formData.get("full_visibility") === "on";
+  await supabase.from("portfolios").update({ full_visibility }).eq("id", id);
+  revalidatePath("/admin/visibility");
+}
+
+export async function updateRoleVisibility(formData: FormData) {
+  const supabase = await createClient();
+  const role = formData.get("role") as string;
+  if (role === "admin") return; // admins always have full visibility
+  const full_visibility = formData.get("full_visibility") === "on";
+  await supabase.from("role_full_visibility").update({ full_visibility }).eq("role", role);
+  revalidatePath("/admin/visibility");
+}

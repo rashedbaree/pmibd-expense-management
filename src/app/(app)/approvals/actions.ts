@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { nextApproverRole } from "@/lib/approval";
-import { COMMENT_MAX_LENGTH } from "@/lib/constants";
+import { CHEQUE_NUMBER_MAX_LENGTH, COMMENT_MAX_LENGTH } from "@/lib/constants";
 import type { ExpenseStatus, UserRole } from "@/lib/types";
 
 export async function actOnExpense(formData: FormData) {
@@ -102,10 +102,14 @@ export async function markAsPaid(formData: FormData) {
   if (!user) redirect("/login");
 
   const expenseId = formData.get("expense_id") as string;
+  const chequeNumberRaw = (formData.get("cheque_number") as string) || null;
+  const cheque_number = chequeNumberRaw
+    ? chequeNumberRaw.slice(0, CHEQUE_NUMBER_MAX_LENGTH)
+    : null;
 
   await supabase
     .from("expenses")
-    .update({ status: "paid" })
+    .update({ status: "paid", cheque_number })
     .eq("id", expenseId)
     .eq("status", "approved");
 
@@ -114,7 +118,7 @@ export async function markAsPaid(formData: FormData) {
     entity_id: expenseId,
     action: "paid",
     actor_id: user.id,
-    details: {},
+    details: { cheque_number },
   });
 
   revalidatePath("/expenses");

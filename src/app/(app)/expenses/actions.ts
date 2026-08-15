@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { APPROVAL_CHAIN } from "@/lib/approval";
+import { startApproval } from "@/lib/approval";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
-import type { UserRole } from "@/lib/types";
 
 export async function createExpense(formData: FormData) {
   const supabase = await createClient();
@@ -36,11 +36,9 @@ export async function createExpense(formData: FormData) {
     .eq("id", user.id)
     .single();
 
-  const required_approval_role: UserRole = "president";
-  const current_approver_role: UserRole =
-    submitterProfile?.role === "finance_director"
-      ? "president"
-      : APPROVAL_CHAIN[0];
+  const { required_approval_role, current_approver_role } = startApproval(
+    submitterProfile?.role,
+  );
 
   const { data: expense, error } = await supabase
     .from("expenses")
@@ -90,5 +88,107 @@ export async function createExpense(formData: FormData) {
     details: { amount, required_approval_role },
   });
 
+  redirect("/expenses");
+}
+
+export async function createReversal(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const originalId = formData.get("expense_id") as string;
+  const remarksRaw = ((formData.get("remarks") as string) || "").trim();
+  const remarks = remarksRaw.slice(0, REMARKS_MAX_LENGTH);
+
+  if (!remarks) {
+    redirect(
+      `/expenses/${originalId}/reverse?error=${encodeURIComponent("A reason for the reversal is required")}`,
+    );
+  }
+
+  const { data: original } = await supabase
+    .from("expenses")
+    .select(
+      "id, date, portfolio_id, event_id, category_id, description, vendor, payment_method, amount, status, entry_type",
+    )
+    .eq("id", originalId)
+    .single();
+
+  if (
+    !original ||
+    original.entry_type !== "expense" ||
+    (original.status !== "approved" && original.status !== "paid")
+  ) {
+    redirect(
+      `/expenses?error=${encodeURIComponent("This expense can't be reversed")}`,
+    );
+  }
+
+  const { data: existingReversal } = await supabase
+    .from("expenses")
+    .select("id")
+    .eq("reverses_expense_id", originalId)
+    .maybeSingle();
+
+  if (existingReversal) {
+    redirect(
+      `/expenses?error=${encodeURIComponent("This expense has already been reversed")}`,
+    );
+  }
+
+  const { data: submitterProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const { required_approval_role, current_approver_role } = startApproval(
+    submitterProfile?.role,
+  );
+
+  const description = `Reversal: ${original.description}`.slice(
+    0,
+    DESCRIPTION_MAX_LENGTH,
+  );
+
+  const { data: reversal, error } = await supabase
+    .from("expenses")
+    .insert({
+      date: new Date().toISOString().slice(0, 10),
+      portfolio_id: original.portfolio_id,
+      event_id: original.event_id,
+      category_id: original.category_id,
+      description,
+      vendor: original.vendor,
+      payment_method: original.payment_method,
+      amount: original.amount,
+      remarks,
+      status: "pending_approval",
+      submitted_by: user.id,
+      required_approval_role,
+      current_approver_role,
+      entry_type: "reversal",
+      reverses_expense_id: originalId,
+    })
+    .select()
+    .single();
+
+  if (error || !reversal) {
+    redirect(
+      `/expenses/${originalId}/reverse?error=${encodeURIComponent(error?.message ?? "Failed to create reversal")}`,
+    );
+  }
+
+  await supabase.from("audit_log").insert({
+    entity_type: "expense",
+    entity_id: reversal.id,
+    action: "reversal_submitted",
+    actor_id: user.id,
+    details: { reverses_expense_id: originalId, amount: original.amount },
+  });
+
+  revalidatePath("/expenses");
   redirect("/expenses");
 }

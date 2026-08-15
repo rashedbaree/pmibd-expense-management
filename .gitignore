@@ -43,3 +43,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# start-app.bat runtime log
+/logs
+
+# database backups (contain real expense data - never commit)
+backup-*.sql
+/backups
+
+# migration script secrets (service role keys - never commit)
+scripts/*.env.local
+
+# account recovery codes - never commit
+/Recovery-Code
+
+# real filled-in bulk import data (contains actual expense records)
+/data
+templates/*
+!templates/bulk-import-template.xlsx

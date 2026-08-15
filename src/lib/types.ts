@@ -18,9 +18,17 @@ export type PaymentMethod = "cheque" | "bank_transfer" | "cash";
 
 export type ApprovalAction = "approve" | "reject" | "return" | "comment";
 
+export type ExpenseEntryType = "expense" | "reversal";
+
 export interface Portfolio {
   id: string;
   name: string;
+  full_visibility?: boolean;
+}
+
+export interface RoleFullVisibility {
+  role: UserRole;
+  full_visibility: boolean;
 }
 
 export interface EventRow {
@@ -60,6 +68,9 @@ export interface Expense {
   remarks: string | null;
   required_approval_role: UserRole | null;
   current_approver_role: UserRole | null;
+  cheque_number: string | null;
+  entry_type: ExpenseEntryType;
+  reverses_expense_id: string | null;
   created_at: string;
 }
 
@@ -70,4 +81,18 @@ export interface ExpenseApproval {
   action: ApprovalAction;
   comment: string | null;
   acted_at: string;
+}
+
+export interface BankTransaction {
+  id: string;
+  trans_date: string;
+  cheque_number: string | null;
+  ref: string | null;
+  narration: string | null;
+  trans_details: string | null;
+  debit: number | null;
+  credit: number | null;
+  balance: number;
+  source_file: string | null;
+  created_at: string;
 }

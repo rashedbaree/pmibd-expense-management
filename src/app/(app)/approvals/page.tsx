@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { actOnExpense, markAsPaid } from "./actions";
-import { COMMENT_MAX_LENGTH } from "@/lib/constants";
+import { CHEQUE_NUMBER_MAX_LENGTH, COMMENT_MAX_LENGTH } from "@/lib/constants";
 
 export default async function ApprovalsPage({
   searchParams,
@@ -24,7 +24,7 @@ export default async function ApprovalsPage({
   let pendingQuery = supabase
     .from("expenses")
     .select(
-      `id, date, amount, description, vendor, remarks, required_approval_role,
+      `id, date, amount, description, vendor, remarks, required_approval_role, entry_type,
        portfolio:portfolios(name),
        category:expense_categories(name),
        submitter:users!expenses_submitted_by_fkey(name, email)`,
@@ -45,6 +45,7 @@ export default async function ApprovalsPage({
         description: string;
         vendor: string | null;
         remarks: string | null;
+        entry_type: "expense" | "reversal";
         portfolio: { name: string } | null;
         category: { name: string } | null;
         submitter: { name: string; email: string } | null;
@@ -56,7 +57,7 @@ export default async function ApprovalsPage({
     ? await supabase
         .from("expenses")
         .select(
-          `id, date, amount, description,
+          `id, date, amount, description, payment_method,
            portfolio:portfolios(name),
            submitter:users!expenses_submitted_by_fkey(name)`,
         )
@@ -69,6 +70,7 @@ export default async function ApprovalsPage({
         date: string;
         amount: number;
         description: string;
+        payment_method: string;
         portfolio: { name: string } | null;
         submitter: { name: string } | null;
       }[]
@@ -123,6 +125,11 @@ export default async function ApprovalsPage({
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <div>
                   <p className="font-medium text-zinc-950 dark:text-zinc-50">
+                    {e.entry_type === "reversal" && (
+                      <span className="mr-1.5 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                        Reversal
+                      </span>
+                    )}
                     {e.description}
                   </p>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -198,7 +205,7 @@ export default async function ApprovalsPage({
             {(approvedUnpaid ?? []).map((e) => (
               <div
                 key={e.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-2 dark:border-zinc-800"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 px-4 py-2 dark:border-zinc-800"
               >
                 <span className="text-sm">
                   {e.date} · {e.portfolio?.name} · {e.description} ·{" "}
@@ -208,8 +215,22 @@ export default async function ApprovalsPage({
                   })}{" "}
                   BDT
                 </span>
-                <form action={markAsPaid}>
+                <form
+                  action={markAsPaid}
+                  className="flex flex-wrap items-end gap-2"
+                >
                   <input type="hidden" name="expense_id" value={e.id} />
+                  {e.payment_method === "cheque" && (
+                    <label className="flex flex-col gap-1 text-sm">
+                      Cheque number
+                      <input
+                        name="cheque_number"
+                        type="text"
+                        maxLength={CHEQUE_NUMBER_MAX_LENGTH}
+                        className="rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                      />
+                    </label>
+                  )}
                   <button className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700">
                     Mark as Paid
                   </button>

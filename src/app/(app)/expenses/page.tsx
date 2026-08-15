@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth";
+import { getVisibilityScope } from "@/lib/visibility";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { ExpenseStatus } from "@/lib/types";
 
@@ -34,23 +37,35 @@ export default async function ExpensesPage({
 }) {
   const filters = await searchParams;
   const supabase = await createClient();
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
 
-  const [{ data: portfolios }, { data: categories }, { data: users }] =
+  const scope = await getVisibilityScope(supabase, profile);
+
+  const [{ data: allPortfolios }, { data: categories }, { data: users }] =
     await Promise.all([
       supabase.from("portfolios").select("id, name").order("name"),
       supabase.from("expense_categories").select("id, name").order("name"),
       supabase.from("users").select("id, name").order("name"),
     ]);
 
+  const portfolios = scope.fullVisibility
+    ? (allPortfolios ?? [])
+    : (allPortfolios ?? []).filter((p) => p.id === profile.portfolio_id);
+
   let query = supabase
     .from("expenses")
     .select(
-      `id, date, amount, status, description, vendor,
+      `id, date, amount, status, description, vendor, cheque_number, entry_type, reverses_expense_id,
        portfolio:portfolios(name),
        category:expense_categories(name),
        submitter:users!expenses_submitted_by_fkey(name)`,
     )
     .order("date", { ascending: false });
+
+  if (!scope.fullVisibility) {
+    query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
+  }
 
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.portfolio_id) query = query.eq("portfolio_id", filters.portfolio_id);
@@ -70,11 +85,20 @@ export default async function ExpensesPage({
         status: ExpenseStatus;
         description: string;
         vendor: string | null;
+        cheque_number: string | null;
+        entry_type: "expense" | "reversal";
+        reverses_expense_id: string | null;
         portfolio: { name: string } | null;
         category: { name: string } | null;
         submitter: { name: string } | null;
       }[]
     | null;
+
+  const reversedIds = new Set(
+    (expenses ?? [])
+      .map((e) => e.reverses_expense_id)
+      .filter((id): id is string => Boolean(id)),
+  );
 
   return (
     <div>
@@ -218,41 +242,73 @@ export default async function ExpensesPage({
               <th className="px-3 py-2">Description</th>
               <th className="px-3 py-2">Submitter</th>
               <th className="px-3 py-2 text-right">Amount</th>
+              <th className="px-3 py-2">Cheque #</th>
               <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {(expenses ?? []).map((e) => (
-              <tr key={e.id}>
-                <td className="px-3 py-2 whitespace-nowrap">{e.date}</td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {e.portfolio?.name}
-                </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {e.category?.name}
-                </td>
-                <td
-                  className="max-w-xs truncate px-3 py-2"
-                  title={e.description}
-                >
-                  {e.description}
-                </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {e.submitter?.name}
-                </td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
-                  {Number(e.amount).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })}
-                </td>
-                <td className="px-3 py-2">
-                  <StatusBadge status={e.status} />
-                </td>
-              </tr>
-            ))}
+            {(expenses ?? []).map((e) => {
+              const isReversal = e.entry_type === "reversal";
+              const canReverse =
+                !isReversal &&
+                (e.status === "approved" || e.status === "paid") &&
+                !reversedIds.has(e.id);
+              return (
+                <tr key={e.id}>
+                  <td className="px-3 py-2 whitespace-nowrap">{e.date}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {e.portfolio?.name}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {e.category?.name}
+                  </td>
+                  <td
+                    className="max-w-xs truncate px-3 py-2"
+                    title={e.description}
+                  >
+                    {isReversal && (
+                      <span className="mr-1.5 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                        Reversal
+                      </span>
+                    )}
+                    {e.description}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {e.submitter?.name}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-right whitespace-nowrap ${
+                      isReversal ? "text-red-600 dark:text-red-400" : ""
+                    }`}
+                  >
+                    {isReversal ? "−" : ""}
+                    {Number(e.amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {e.cheque_number ?? "—"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <StatusBadge status={e.status} />
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {canReverse && (
+                      <Link
+                        href={`/expenses/${e.id}/reverse`}
+                        className="text-sm text-brand hover:underline"
+                      >
+                        Reverse
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
             {(expenses ?? []).length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-zinc-500">
+                <td colSpan={9} className="px-3 py-6 text-center text-zinc-500">
                   No expenses found.
                 </td>
               </tr>

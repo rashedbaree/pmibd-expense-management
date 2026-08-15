@@ -1,5 +1,9 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { ExpenseStatus } from "@/lib/types";
+import { getCurrentProfile } from "@/lib/auth";
+import { getVisibilityScope } from "@/lib/visibility";
+import { signedAmount } from "@/lib/expense";
+import type { ExpenseEntryType, ExpenseStatus } from "@/lib/types";
 import ReportsClient from "./client";
 
 type Row = {
@@ -7,6 +11,7 @@ type Row = {
   date: string;
   amount: number;
   status: ExpenseStatus;
+  entry_type: ExpenseEntryType;
   portfolio: { name: string } | null;
   category: { name: string } | null;
   event: { name: string } | null;
@@ -14,16 +19,25 @@ type Row = {
 
 export default async function ReportsPage() {
   const supabase = await createClient();
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
 
-  const { data: raw } = await supabase
+  const scope = await getVisibilityScope(supabase, profile);
+
+  let query = supabase
     .from("expenses")
     .select(
-      `id, date, amount, status,
+      `id, date, amount, status, entry_type,
        portfolio:portfolios(name),
        category:expense_categories(name),
        event:events(name)`,
     )
     .order("date", { ascending: false });
+  if (!scope.fullVisibility) {
+    query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
+  }
+
+  const { data: raw } = await query;
 
   const expenses = (raw ?? []) as unknown as Row[];
 
@@ -33,7 +47,7 @@ export default async function ReportsPage() {
       const k = key(e);
       const entry = map.get(k) ?? { count: 0, amount: 0 };
       entry.count += 1;
-      entry.amount += Number(e.amount);
+      entry.amount += signedAmount(e);
       map.set(k, entry);
     }
     return [...map.entries()]
