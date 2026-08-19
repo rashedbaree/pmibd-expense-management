@@ -13,11 +13,19 @@ export async function requestPasswordReset(formData: FormData) {
   const protocol = host.startsWith("localhost") ? "http" : "https";
   const origin = `${protocol}://${host}`;
 
-  await supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/reset-password`,
   });
+  if (error) {
+    // Logged server-side only - the user-facing message stays generic so
+    // this can't be used to check which addresses have accounts.
+    console.error(`resetPasswordForEmail failed for ${email}:`, {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+      name: error.name,
+    });
+  }
 
-  // Redirect to the same confirmation regardless of whether the email is
-  // registered, so this can't be used to check which addresses have accounts.
   redirect("/forgot-password?sent=1");
 }
