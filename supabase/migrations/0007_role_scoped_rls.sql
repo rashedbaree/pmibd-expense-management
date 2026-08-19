@@ -28,6 +28,10 @@
 -- add/delete actions directly (bypassing the UI's role check, since those
 -- server actions don't re-check role themselves) — those are now enforced
 -- at the database level too.
+--
+-- Every "create policy" below is preceded by a matching "drop policy if
+-- exists", so this whole file is safe to re-run regardless of how far an
+-- earlier attempt got before failing.
 
 -- Helper functions -----------------------------------------------------
 -- SECURITY DEFINER so a policy on `users` can read `users` without
@@ -122,55 +126,74 @@ drop policy if exists "authenticated read/write" on bank_statement_lines;
 
 -- portfolios: everyone reads; only admins manage --------------------------
 
+drop policy if exists "read portfolios" on portfolios;
 create policy "read portfolios" on portfolios
   for select to authenticated using (true);
+drop policy if exists "admins add portfolios" on portfolios;
 create policy "admins add portfolios" on portfolios
   for insert to authenticated with check (is_admin());
+drop policy if exists "admins update portfolios" on portfolios;
 create policy "admins update portfolios" on portfolios
   for update to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "admins delete portfolios" on portfolios;
 create policy "admins delete portfolios" on portfolios
   for delete to authenticated using (is_admin());
 
 -- users: everyone reads (names/roles are used throughout the app); only
 -- admins create or edit accounts (no self-registration).
 
+drop policy if exists "read users" on users;
 create policy "read users" on users
   for select to authenticated using (true);
+drop policy if exists "admins add users" on users;
 create policy "admins add users" on users
   for insert to authenticated with check (is_admin());
+drop policy if exists "admins update users" on users;
 create policy "admins update users" on users
   for update to authenticated using (is_admin()) with check (is_admin());
 
 -- events: everyone reads; only admins manage ------------------------------
 
+drop policy if exists "read events" on events;
 create policy "read events" on events
   for select to authenticated using (true);
+drop policy if exists "admins add events" on events;
 create policy "admins add events" on events
   for insert to authenticated with check (is_admin());
+drop policy if exists "admins update events" on events;
 create policy "admins update events" on events
   for update to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "admins delete events" on events;
 create policy "admins delete events" on events
   for delete to authenticated using (is_admin());
 
 -- expense_categories: everyone reads; only admins manage ------------------
 
+drop policy if exists "read expense categories" on expense_categories;
 create policy "read expense categories" on expense_categories
   for select to authenticated using (true);
+drop policy if exists "admins add expense categories" on expense_categories;
 create policy "admins add expense categories" on expense_categories
   for insert to authenticated with check (is_admin());
+drop policy if exists "admins update expense categories" on expense_categories;
 create policy "admins update expense categories" on expense_categories
   for update to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "admins delete expense categories" on expense_categories;
 create policy "admins delete expense categories" on expense_categories
   for delete to authenticated using (is_admin());
 
 -- approval_matrix: everyone reads; only admins manage ---------------------
 
+drop policy if exists "read approval matrix" on approval_matrix;
 create policy "read approval matrix" on approval_matrix
   for select to authenticated using (true);
+drop policy if exists "admins add approval matrix" on approval_matrix;
 create policy "admins add approval matrix" on approval_matrix
   for insert to authenticated with check (is_admin());
+drop policy if exists "admins update approval matrix" on approval_matrix;
 create policy "admins update approval matrix" on approval_matrix
   for update to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "admins delete approval matrix" on approval_matrix;
 create policy "admins delete approval matrix" on approval_matrix
   for delete to authenticated using (is_admin());
 
@@ -183,13 +206,16 @@ create policy "admins delete approval matrix" on approval_matrix
 -- non-admins from changing any field but status/current_approver_role.
 -- Delete: nobody.
 
+drop policy if exists "read expenses" on expenses;
 create policy "read expenses" on expenses
   for select to authenticated using (true);
 
+drop policy if exists "submit own expenses" on expenses;
 create policy "submit own expenses" on expenses
   for insert to authenticated
   with check (submitted_by = auth.uid() or is_admin());
 
+drop policy if exists "act on assigned expenses" on expenses;
 create policy "act on assigned expenses" on expenses
   for update to authenticated
   using (
@@ -208,9 +234,11 @@ create policy "act on assigned expenses" on expenses
 -- expense_documents: everyone reads; only the submitter (or admin) attaches
 -- documents to their own expense.
 
+drop policy if exists "read expense documents" on expense_documents;
 create policy "read expense documents" on expense_documents
   for select to authenticated using (true);
 
+drop policy if exists "attach documents to own expenses" on expense_documents;
 create policy "attach documents to own expenses" on expense_documents
   for insert to authenticated
   with check (
@@ -225,9 +253,11 @@ create policy "attach documents to own expenses" on expense_documents
 -- only the currently assigned approver can record a decision, matching
 -- what actOnExpense checks in the app.
 
+drop policy if exists "read expense approvals" on expense_approvals;
 create policy "read expense approvals" on expense_approvals
   for select to authenticated using (true);
 
+drop policy if exists "assigned approver records decision" on expense_approvals;
 create policy "assigned approver records decision" on expense_approvals
   for insert to authenticated
   with check (
@@ -246,20 +276,26 @@ create policy "assigned approver records decision" on expense_approvals
 -- audit_log: append-only. Anyone can log their own actions; only admins
 -- can read the trail; nobody can edit or delete entries.
 
+drop policy if exists "admins read audit log" on audit_log;
 create policy "admins read audit log" on audit_log
   for select to authenticated using (is_admin());
 
+drop policy if exists "log own actions" on audit_log;
 create policy "log own actions" on audit_log
   for insert to authenticated
   with check (actor_id = auth.uid());
 
 -- bank_statement_lines: admin-only, matching /admin/reconciliation.
 
+drop policy if exists "admins read bank statement lines" on bank_statement_lines;
 create policy "admins read bank statement lines" on bank_statement_lines
   for select to authenticated using (is_admin());
+drop policy if exists "admins add bank statement lines" on bank_statement_lines;
 create policy "admins add bank statement lines" on bank_statement_lines
   for insert to authenticated with check (is_admin());
+drop policy if exists "admins update bank statement lines" on bank_statement_lines;
 create policy "admins update bank statement lines" on bank_statement_lines
   for update to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "admins delete bank statement lines" on bank_statement_lines;
 create policy "admins delete bank statement lines" on bank_statement_lines
   for delete to authenticated using (is_admin());
