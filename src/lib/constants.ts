@@ -2,3 +2,5 @@ export const DESCRIPTION_MAX_LENGTH = 200;
 export const REMARKS_MAX_LENGTH = 200;
 export const COMMENT_MAX_LENGTH = 100;
 export const CHEQUE_NUMBER_MAX_LENGTH = 30;
+export const IMPORT_MAX_FILE_SIZE_MB = 5;
+export const MIN_PASSWORD_LENGTH = 8;

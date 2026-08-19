@@ -7,8 +7,7 @@ const SECTIONS = [
   { href: "/admin/portfolios", label: "Portfolios", desc: "Add or remove portfolios" },
   { href: "/admin/categories", label: "Expense Categories", desc: "Categories and subcategories" },
   { href: "/admin/events", label: "Events", desc: "Events / initiatives tied to a portfolio" },
-  { href: "/admin/import", label: "Bulk Import", desc: "Import historical expenses from CSV as Paid" },
-  { href: "/admin/bank-import", label: "Bank Statement", desc: "Upload bank statement transactions" },
+  { href: "/admin/reconciliation", label: "Bank Reconciliation", desc: "Import expenses and bank statement, reconcile by cheque number" },
   { href: "/admin/visibility", label: "Expense Visibility", desc: "Control who can see other portfolios' expenses" },
 ];
 

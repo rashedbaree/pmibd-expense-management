@@ -1,30 +1,17 @@
--- Adds support for reversing an expense that didn't actually go through
--- (e.g. a payment that bounced or an event that was cancelled), and for
--- recording standalone historical corrections via bulk import.
--- Run in the SQL Editor after 0004_cheque_number.sql.
+-- Adds the ability to link a reversal row (entry_type = 'reversal', added
+-- by 0004_bulk_import.sql) back to the specific expense it reverses, for
+-- reversals created in-app via the Reverse button. Bulk-imported reversals
+-- may leave reverses_expense_id null - historical data often has no clean
+-- 1:1 mapping back to a specific original row (e.g. cheque_number covers
+-- many line items), so linkage is optional there, not required.
+-- Run in the SQL Editor after 0004_bulk_import.sql.
 --
--- A reversal is stored as its own expense row (entry_type = 'reversal') that
--- carries the same positive amount (the `amount > 0` check on expenses is
--- unchanged — sign is conveyed by entry_type, not by the number itself) and,
--- when created in-app via the Reverse button, points back at the original
--- via reverses_expense_id. Bulk-imported reversals may leave
--- reverses_expense_id null — historical data often has no clean 1:1 mapping
--- back to a specific original row (e.g. cheque_number covers many line
--- items), so linkage is optional there, not required.
-
 -- Every statement below is written to be safely re-runnable: if an earlier
 -- attempt partially applied this file (e.g. the SQL Editor stopped partway
 -- through after an error), re-running it from the top just skips whatever
 -- already exists instead of erroring.
 
-do $$ begin
-  create type expense_entry_type as enum ('expense', 'reversal');
-exception
-  when duplicate_object then null;
-end $$;
-
 alter table expenses
-  add column if not exists entry_type expense_entry_type not null default 'expense',
   add column if not exists reverses_expense_id uuid references expenses (id);
 
 do $$ begin

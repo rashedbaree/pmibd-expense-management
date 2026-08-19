@@ -59,5 +59,4 @@ scripts/*.env.local
 
 # real filled-in bulk import data (contains actual expense records)
 /data
-templates/*
-!templates/bulk-import-template.xlsx
+/templates

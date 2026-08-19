@@ -274,12 +274,11 @@ async function main() {
     actor_id: DEV_ADMIN_USER_ID,
   }));
 
-  await copyTable("bank_transactions", (row) => {
-    // dedupe_key is a Postgres GENERATED column - Postgres computes it,
-    // it can't be assigned on insert.
-    const { dedupe_key, ...rest } = row;
-    return { ...rest, created_by: DEV_ADMIN_USER_ID };
-  });
+  await copyTable("bank_statement_lines", (row) => ({
+    ...row,
+    created_by: DEV_ADMIN_USER_ID,
+    updated_by: DEV_ADMIN_USER_ID,
+  }));
 
   console.log("\nCopying uploaded document files (this can take a while)...");
   await copyDocumentFiles(documents);

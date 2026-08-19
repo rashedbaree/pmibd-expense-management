@@ -22,7 +22,8 @@ export default async function ForgotPasswordPage({
 
         {sent ? (
           <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-            If that email has an account, a reset link is on its way.
+            If that email is registered, a reset link is on its way. Check
+            your inbox (and spam folder).
           </p>
         ) : (
           <form action={requestPasswordReset} className="flex flex-col gap-4">
@@ -35,6 +36,7 @@ export default async function ForgotPasswordPage({
                 className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
               />
             </label>
+
             <button
               type="submit"
               className="mt-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"

@@ -3,14 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { getVisibilityScope } from "@/lib/visibility";
 import { signedAmount } from "@/lib/expense";
-import type { ExpenseEntryType, ExpenseStatus } from "@/lib/types";
+import type { EntryType, ExpenseStatus } from "@/lib/types";
 
 type Row = {
   id: string;
   date: string;
   amount: number;
   status: ExpenseStatus;
-  entry_type: ExpenseEntryType;
+  entry_type: EntryType;
   portfolio: { name: string } | null;
   category: { name: string } | null;
 };
