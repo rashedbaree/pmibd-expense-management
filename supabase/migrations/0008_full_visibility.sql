@@ -30,6 +30,10 @@ on conflict (role) do nothing;
 
 alter table role_full_visibility enable row level security;
 
+-- Drop the blanket policy an earlier version of this migration created
+-- (on a database that already ran it before this file was rewritten).
+drop policy if exists "authenticated read/write" on role_full_visibility;
+
 -- Everyone needs to read this (the app checks it for every user's own
 -- visibility scope); only admins can change it - same pattern as every
 -- other reference table in 0007_role_scoped_rls.sql.
