@@ -77,10 +77,17 @@ async function readWorkbookRows(file: File) {
   });
 }
 
+function normalizeHeaderKey(key: string): string {
+  // Some templates mark required columns with a trailing "*" in the header
+  // text itself (rather than just styling); strip it so "date*" still
+  // matches the column named "date".
+  return key.trim().toLowerCase().replace(/\*$/, "");
+}
+
 function lowerKeyedRow(rawRow: Record<string, unknown>) {
   const row: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(rawRow)) {
-    row[key.trim().toLowerCase()] = value;
+    row[normalizeHeaderKey(key)] = value;
   }
   return row;
 }
@@ -101,7 +108,7 @@ export async function importExpenses(formData: FormData) {
     redirectWithError("expenses", "The file has no data rows.");
   }
 
-  const headerKeys = Object.keys(rawRows[0]).map((k) => k.trim().toLowerCase());
+  const headerKeys = Object.keys(rawRows[0]).map(normalizeHeaderKey);
   const missingColumns = EXPENSE_REQUIRED_COLUMNS.filter(
     (c) => !headerKeys.includes(c),
   );
@@ -250,8 +257,12 @@ export async function importExpenses(formData: FormData) {
     });
   });
 
+  // All-or-nothing: a file with any invalid row imports nothing, so a
+  // partial file never leaves the data half-imported and re-uploading
+  // after fixing the errors can't create duplicates of the rows that
+  // would otherwise have already gone through.
   let createdCount = 0;
-  if (toInsert.length > 0) {
+  if (errors.length === 0 && toInsert.length > 0) {
     const { data: inserted, error } = await supabase
       .from("expenses")
       .insert(toInsert)
@@ -307,7 +318,7 @@ export async function importBankStatement(formData: FormData) {
     redirectWithError("bank", "The file has no data rows.");
   }
 
-  const headerKeys = Object.keys(rawRows[0]).map((k) => k.trim().toLowerCase());
+  const headerKeys = Object.keys(rawRows[0]).map(normalizeHeaderKey);
   const missingColumns = BANK_REQUIRED_COLUMNS.filter((c) => !headerKeys.includes(c));
   if (missingColumns.length > 0) {
     redirectWithError(
@@ -357,8 +368,9 @@ export async function importBankStatement(formData: FormData) {
     });
   });
 
+  // All-or-nothing, same as importExpenses - see comment there.
   let createdCount = 0;
-  if (toInsert.length > 0) {
+  if (errors.length === 0 && toInsert.length > 0) {
     const { data: inserted, error } = await supabase
       .from("bank_statement_lines")
       .insert(toInsert)

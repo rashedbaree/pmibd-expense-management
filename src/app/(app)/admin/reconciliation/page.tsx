@@ -169,16 +169,17 @@ export default async function AdminReconciliationPage({
             {params.error}
           </p>
         )}
-        {showExpenseResult && params.created !== undefined && (
+        {showExpenseResult && params.created !== undefined && rowErrors.length === 0 && (
           <div className="mt-4 max-w-3xl rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
             Imported {params.created} expense
             {params.created === "1" ? "" : "s"}.
           </div>
         )}
         {showExpenseResult && rowErrors.length > 0 && (
-          <div className="mt-3 max-w-3xl rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <div className="mt-3 max-w-3xl rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
             <p className="font-medium">
-              {rowErrors.length} row{rowErrors.length === 1 ? "" : "s"} skipped:
+              Nothing was imported — fix {rowErrors.length} row
+              {rowErrors.length === 1 ? "" : "s"} below and re-upload:
             </p>
             <ul className="mt-1 list-disc pl-5">
               {rowErrors.map((e, i) => (
@@ -220,16 +221,17 @@ export default async function AdminReconciliationPage({
             {params.error}
           </p>
         )}
-        {showBankResult && params.created !== undefined && (
+        {showBankResult && params.created !== undefined && rowErrors.length === 0 && (
           <div className="mt-4 max-w-3xl rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
             Imported {params.created} bank statement line
             {params.created === "1" ? "" : "s"}.
           </div>
         )}
         {showBankResult && rowErrors.length > 0 && (
-          <div className="mt-3 max-w-3xl rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <div className="mt-3 max-w-3xl rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
             <p className="font-medium">
-              {rowErrors.length} row{rowErrors.length === 1 ? "" : "s"} skipped:
+              Nothing was imported — fix {rowErrors.length} row
+              {rowErrors.length === 1 ? "" : "s"} below and re-upload:
             </p>
             <ul className="mt-1 list-disc pl-5">
               {rowErrors.map((e, i) => (
