@@ -132,15 +132,19 @@ export async function importExpenses(formData: FormData) {
     supabase.from("users").select("id, email"),
   ]);
 
+  // .trim() the stored name too, not just the uploaded value - a stray
+  // leading/trailing space on a portfolio/category/event name (e.g. typed
+  // into the Admin add-form before it trimmed input) would otherwise never
+  // match anything typed cleanly into an import file.
   const portfolioMap = new Map(
-    (portfolios ?? []).map((p) => [p.name.toLowerCase(), p.id as string]),
+    (portfolios ?? []).map((p) => [p.name.trim().toLowerCase(), p.id as string]),
   );
   const categoryMap = new Map(
-    (categories ?? []).map((c) => [c.name.toLowerCase(), c.id as string]),
+    (categories ?? []).map((c) => [c.name.trim().toLowerCase(), c.id as string]),
   );
   const eventMap = new Map(
     (events ?? []).map((e) => [
-      `${e.portfolio_id}:${e.name.toLowerCase()}`,
+      `${e.portfolio_id}:${e.name.trim().toLowerCase()}`,
       e.id as string,
     ]),
   );
