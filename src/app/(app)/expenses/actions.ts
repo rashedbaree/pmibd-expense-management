@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { startApproval } from "@/lib/approval";
+import { notifyApprover } from "@/lib/notifications";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
 export async function createExpense(formData: FormData) {
@@ -30,11 +31,10 @@ export async function createExpense(formData: FormData) {
     .getAll("document")
     .filter((f): f is File => f instanceof File && f.size > 0);
 
-  const { data: submitterProfile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const [{ data: submitterProfile }, { data: portfolio }] = await Promise.all([
+    supabase.from("users").select("role, name").eq("id", user.id).single(),
+    supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
+  ]);
 
   const { required_approval_role, current_approver_role } = startApproval(
     submitterProfile?.role,
@@ -88,6 +88,14 @@ export async function createExpense(formData: FormData) {
     details: { amount, required_approval_role },
   });
 
+  await notifyApprover(supabase, current_approver_role, {
+    description,
+    amount,
+    date,
+    portfolioName: portfolio?.name ?? null,
+    submitterName: submitterProfile?.name ?? null,
+  });
+
   redirect("/expenses");
 }
 
@@ -138,11 +146,10 @@ export async function createReversal(formData: FormData) {
     );
   }
 
-  const { data: submitterProfile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const [{ data: submitterProfile }, { data: portfolio }] = await Promise.all([
+    supabase.from("users").select("role, name").eq("id", user.id).single(),
+    supabase.from("portfolios").select("name").eq("id", original.portfolio_id).single(),
+  ]);
 
   const { required_approval_role, current_approver_role } = startApproval(
     submitterProfile?.role,
@@ -187,6 +194,14 @@ export async function createReversal(formData: FormData) {
     action: "reversal_submitted",
     actor_id: user.id,
     details: { reverses_expense_id: originalId, amount: original.amount },
+  });
+
+  await notifyApprover(supabase, current_approver_role, {
+    description,
+    amount: original.amount,
+    date: reversal.date,
+    portfolioName: portfolio?.name ?? null,
+    submitterName: submitterProfile?.name ?? null,
   });
 
   revalidatePath("/expenses");

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { nextApproverRole } from "@/lib/approval";
+import { notifyApprover } from "@/lib/notifications";
 import { CHEQUE_NUMBER_MAX_LENGTH, COMMENT_MAX_LENGTH } from "@/lib/constants";
 import type { ExpenseStatus, UserRole } from "@/lib/types";
 
@@ -27,7 +28,12 @@ export async function actOnExpense(formData: FormData) {
 
   const { data: expense } = await supabase
     .from("expenses")
-    .select("status, portfolio_id, current_approver_role, required_approval_role")
+    .select(
+      `status, portfolio_id, current_approver_role, required_approval_role,
+       description, amount, date,
+       portfolio:portfolios(name),
+       submitter:users!expenses_submitted_by_fkey(name)`,
+    )
     .eq("id", expenseId)
     .single();
 
@@ -88,6 +94,18 @@ export async function actOnExpense(formData: FormData) {
     actor_id: user.id,
     details: { comment, new_status: newStatus },
   });
+
+  if (intent === "approve" && newCurrentRole) {
+    const portfolio = expense.portfolio as unknown as { name: string } | null;
+    const submitter = expense.submitter as unknown as { name: string } | null;
+    await notifyApprover(supabase, newCurrentRole, {
+      description: expense.description,
+      amount: expense.amount,
+      date: expense.date,
+      portfolioName: portfolio?.name ?? null,
+      submitterName: submitter?.name ?? null,
+    });
+  }
 
   revalidatePath("/approvals");
   revalidatePath("/expenses");

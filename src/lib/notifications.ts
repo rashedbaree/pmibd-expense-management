@@ -1,0 +1,65 @@
+import { headers } from "next/headers";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { sendMail } from "./email";
+import type { UserRole } from "./types";
+
+async function getOrigin() {
+  const headersList = await headers();
+  const host = headersList.get("x-forwarded-host") ?? headersList.get("host") ?? "";
+  const proto =
+    headersList.get("x-forwarded-proto") ??
+    (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+type ExpenseSummary = {
+  description: string;
+  amount: number;
+  date: string;
+  portfolioName: string | null;
+  submitterName: string | null;
+};
+
+// Notifies whoever currently holds `role` that an expense is waiting on
+// them. Looks up active users with that role at send time, rather than
+// storing an address on the expense - so it always reaches whoever holds
+// the role today, even if that person changes later.
+export async function notifyApprover(
+  supabase: SupabaseClient,
+  role: UserRole,
+  expense: ExpenseSummary,
+) {
+  const { data: approvers, error } = await supabase
+    .from("users")
+    .select("email")
+    .eq("role", role)
+    .eq("is_active", true);
+
+  if (error) {
+    console.error(`notifyApprover: looking up ${role} users failed:`, error.message);
+    return;
+  }
+
+  const emails = (approvers ?? []).map((u) => u.email).filter(Boolean);
+  if (emails.length === 0) return;
+
+  const origin = await getOrigin();
+  const amount = Number(expense.amount).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+  });
+
+  const html = `
+    <p>An expense is waiting for your approval.</p>
+    <table cellpadding="4" style="border-collapse: collapse;">
+      <tr><td><strong>Submitted by</strong></td><td>${expense.submitterName ?? "-"}</td></tr>
+      <tr><td><strong>Portfolio</strong></td><td>${expense.portfolioName ?? "-"}</td></tr>
+      <tr><td><strong>Date</strong></td><td>${expense.date}</td></tr>
+      <tr><td><strong>Amount</strong></td><td>${amount} BDT</td></tr>
+      <tr><td><strong>Description</strong></td><td>${expense.description}</td></tr>
+    </table>
+    <p><a href="${origin}/approvals">Review it on the Approvals page</a></p>
+    <p style="color:#666;font-size:12px;">PMI Bangladesh Expense Management System</p>
+  `;
+
+  await sendMail(emails, "Expense pending your approval", html);
+}
