@@ -1,6 +1,9 @@
-// Finds expense rows that are exact duplicates of each other (same date,
-// portfolio, category, event, description, vendor, payment method, amount,
-// cheque number and entry type) and previews which ones would be removed.
+// Finds expense rows that are exact duplicates of each other - every data
+// column matches (date, portfolio, category, event, description, vendor,
+// payment method, amount, cheque number, entry type, status, remarks,
+// approval routing, submitted/created/updated-by) - and previews which ones
+// would be removed. Only `id`, `created_at` and `updated_at` are excluded
+// from the comparison, since those are always unique per row by design.
 // Read-only by default - never deletes without --confirm.
 //
 // Within each duplicate group, the oldest row (by created_at, then id) is
@@ -58,19 +61,28 @@ if (!url || !serviceRoleKey) {
 
 const supabase = createClient(url, serviceRoleKey);
 
-// Fields that must all match for two rows to be considered duplicates.
+// Every data column must match for two rows to be considered duplicates -
+// only id/created_at/updated_at (inherently unique per row) are left out.
 function dupKey(r) {
   return [
     r.date,
     r.portfolio_id,
     r.category_id,
     r.event_id ?? "",
-    (r.description ?? "").trim().toLowerCase(),
-    (r.vendor ?? "").trim().toLowerCase(),
+    r.description ?? "",
+    r.vendor ?? "",
     r.payment_method,
     r.amount,
     r.cheque_number ?? "",
     r.entry_type,
+    r.reverses_expense_id ?? "",
+    r.status,
+    r.remarks ?? "",
+    r.required_approval_role ?? "",
+    r.current_approver_role ?? "",
+    r.submitted_by,
+    r.created_by,
+    r.updated_by ?? "",
   ].join("|");
 }
 
@@ -79,7 +91,9 @@ async function main() {
     .from("expenses")
     .select(
       `id, date, portfolio_id, category_id, event_id, description, vendor,
-       payment_method, amount, cheque_number, entry_type, status, created_at,
+       payment_method, amount, cheque_number, entry_type, reverses_expense_id,
+       status, remarks, required_approval_role, current_approver_role,
+       submitted_by, created_by, updated_by, created_at,
        portfolio:portfolios(name),
        category:expense_categories(name)`,
     )
