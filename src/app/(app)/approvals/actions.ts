@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { nextApproverRole } from "@/lib/approval";
-import { notifyApprover } from "@/lib/notifications";
+import { notifyApprover, notifySubmitterOfReturn } from "@/lib/notifications";
 import { CHEQUE_NUMBER_MAX_LENGTH, COMMENT_MAX_LENGTH } from "@/lib/constants";
 import type { ExpenseStatus, UserRole } from "@/lib/types";
 
@@ -32,7 +32,7 @@ export async function actOnExpense(formData: FormData) {
       `status, portfolio_id, current_approver_role, required_approval_role,
        description, amount, date,
        portfolio:portfolios(name),
-       submitter:users!expenses_submitted_by_fkey(name)`,
+       submitter:users!expenses_submitted_by_fkey(name, email)`,
     )
     .eq("id", expenseId)
     .single();
@@ -95,9 +95,12 @@ export async function actOnExpense(formData: FormData) {
     details: { comment, new_status: newStatus },
   });
 
+  const portfolio = expense.portfolio as unknown as { name: string } | null;
+  const submitter = expense.submitter as unknown as
+    | { name: string; email: string }
+    | null;
+
   if (intent === "approve" && newCurrentRole) {
-    const portfolio = expense.portfolio as unknown as { name: string } | null;
-    const submitter = expense.submitter as unknown as { name: string } | null;
     await notifyApprover(supabase, newCurrentRole, {
       description: expense.description,
       amount: expense.amount,
@@ -105,6 +108,20 @@ export async function actOnExpense(formData: FormData) {
       portfolioName: portfolio?.name ?? null,
       submitterName: submitter?.name ?? null,
     });
+  } else if (intent === "return") {
+    await notifySubmitterOfReturn(
+      supabase,
+      submitter?.email ?? null,
+      expenseId,
+      {
+        description: expense.description,
+        amount: expense.amount,
+        date: expense.date,
+        portfolioName: portfolio?.name ?? null,
+        submitterName: submitter?.name ?? null,
+      },
+      comment,
+    );
   }
 
   revalidatePath("/approvals");

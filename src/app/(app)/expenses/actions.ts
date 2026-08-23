@@ -207,3 +207,110 @@ export async function createReversal(formData: FormData) {
   revalidatePath("/expenses");
   redirect("/expenses");
 }
+
+export async function resubmitExpense(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const expenseId = formData.get("expense_id") as string;
+
+  const { data: existing } = await supabase
+    .from("expenses")
+    .select("status, submitted_by")
+    .eq("id", expenseId)
+    .single();
+
+  if (
+    !existing ||
+    existing.status !== "returned" ||
+    existing.submitted_by !== user.id
+  ) {
+    redirect(
+      `/expenses?error=${encodeURIComponent("This expense can't be resubmitted")}`,
+    );
+  }
+
+  const date = formData.get("date") as string;
+  const portfolio_id = formData.get("portfolio_id") as string;
+  const event_id = (formData.get("event_id") as string) || null;
+  const category_id = formData.get("category_id") as string;
+  const description = (formData.get("description") as string).slice(
+    0,
+    DESCRIPTION_MAX_LENGTH,
+  );
+  const vendor = (formData.get("vendor") as string) || null;
+  const payment_method = formData.get("payment_method") as string;
+  const amount = Number(formData.get("amount"));
+  const remarksRaw = (formData.get("remarks") as string) || null;
+  const remarks = remarksRaw ? remarksRaw.slice(0, REMARKS_MAX_LENGTH) : null;
+  const files = formData
+    .getAll("document")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+
+  const [{ data: submitterProfile }, { data: portfolio }] = await Promise.all([
+    supabase.from("users").select("role, name").eq("id", user.id).single(),
+    supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
+  ]);
+
+  const { current_approver_role } = startApproval(submitterProfile?.role);
+
+  const { error } = await supabase
+    .from("expenses")
+    .update({
+      date,
+      portfolio_id,
+      event_id,
+      category_id,
+      description,
+      vendor,
+      payment_method,
+      amount,
+      remarks,
+      status: "pending_approval",
+      current_approver_role,
+    })
+    .eq("id", expenseId);
+
+  if (error) {
+    redirect(
+      `/expenses/${expenseId}/edit?error=${encodeURIComponent(error.message)}`,
+    );
+  }
+
+  for (const file of files) {
+    const path = `${expenseId}/${crypto.randomUUID()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("expense-documents")
+      .upload(path, file);
+
+    if (!uploadError) {
+      await supabase.from("expense_documents").insert({
+        expense_id: expenseId,
+        file_url: path,
+      });
+    }
+  }
+
+  await supabase.from("audit_log").insert({
+    entity_type: "expense",
+    entity_id: expenseId,
+    action: "resubmitted",
+    actor_id: user.id,
+    details: { amount },
+  });
+
+  await notifyApprover(supabase, current_approver_role, {
+    description,
+    amount,
+    date,
+    portfolioName: portfolio?.name ?? null,
+    submitterName: submitterProfile?.name ?? null,
+  });
+
+  revalidatePath("/expenses");
+  revalidatePath("/approvals");
+  redirect("/expenses");
+}

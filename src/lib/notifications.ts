@@ -63,3 +63,36 @@ export async function notifyApprover(
 
   await sendMail(emails, "Expense pending your approval", html);
 }
+
+// Notifies the submitter that their expense was returned, with the
+// approver's comment (if any) and a link straight to the edit/resubmit
+// page for that specific expense.
+export async function notifySubmitterOfReturn(
+  supabase: SupabaseClient,
+  submitterEmail: string | null,
+  expenseId: string,
+  expense: ExpenseSummary,
+  comment: string | null,
+) {
+  if (!submitterEmail) return;
+
+  const origin = await getOrigin();
+  const amount = Number(expense.amount).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+  });
+
+  const html = `
+    <p>Your expense was returned for correction.</p>
+    <table cellpadding="4" style="border-collapse: collapse;">
+      <tr><td><strong>Portfolio</strong></td><td>${expense.portfolioName ?? "-"}</td></tr>
+      <tr><td><strong>Date</strong></td><td>${expense.date}</td></tr>
+      <tr><td><strong>Amount</strong></td><td>${amount} BDT</td></tr>
+      <tr><td><strong>Description</strong></td><td>${expense.description}</td></tr>
+      ${comment ? `<tr><td><strong>Reason</strong></td><td>${comment}</td></tr>` : ""}
+    </table>
+    <p><a href="${origin}/expenses/${expenseId}/edit">Edit and resubmit it</a></p>
+    <p style="color:#666;font-size:12px;">PMI Bangladesh Expense Management System</p>
+  `;
+
+  await sendMail([submitterEmail], "Your expense was returned", html);
+}

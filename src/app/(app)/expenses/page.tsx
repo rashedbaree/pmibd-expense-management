@@ -56,7 +56,7 @@ export default async function ExpensesPage({
   let query = supabase
     .from("expenses")
     .select(
-      `id, date, amount, status, description, vendor, cheque_number, entry_type, reverses_expense_id,
+      `id, date, amount, status, description, vendor, cheque_number, entry_type, reverses_expense_id, submitted_by,
        portfolio:portfolios(name),
        category:expense_categories(name),
        submitter:users!expenses_submitted_by_fkey(name)`,
@@ -88,6 +88,7 @@ export default async function ExpensesPage({
         cheque_number: string | null;
         entry_type: "expense" | "reversal";
         reverses_expense_id: string | null;
+        submitted_by: string;
         portfolio: { name: string } | null;
         category: { name: string } | null;
         submitter: { name: string } | null;
@@ -254,6 +255,8 @@ export default async function ExpensesPage({
                 !isReversal &&
                 (e.status === "approved" || e.status === "paid") &&
                 !reversedIds.has(e.id);
+              const canResubmit =
+                e.status === "returned" && e.submitted_by === profile.id;
               return (
                 <tr key={e.id}>
                   <td className="px-3 py-2 whitespace-nowrap">{e.date}</td>
@@ -300,6 +303,14 @@ export default async function ExpensesPage({
                         className="text-sm text-brand hover:underline"
                       >
                         Reverse
+                      </Link>
+                    )}
+                    {canResubmit && (
+                      <Link
+                        href={`/expenses/${e.id}/edit`}
+                        className="text-sm text-brand hover:underline"
+                      >
+                        Edit &amp; Resubmit
                       </Link>
                     )}
                   </td>
