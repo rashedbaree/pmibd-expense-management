@@ -101,18 +101,37 @@ export default async function ExpensesPage({
       .filter((id): id is string => Boolean(id)),
   );
 
+  const exportParams = new URLSearchParams();
+  if (filters.status) exportParams.set("status", filters.status);
+  if (filters.portfolio_id) exportParams.set("portfolio_id", filters.portfolio_id);
+  if (filters.category_id) exportParams.set("category_id", filters.category_id);
+  if (filters.submitted_by) exportParams.set("submitted_by", filters.submitted_by);
+  if (filters.date_from) exportParams.set("date_from", filters.date_from);
+  if (filters.date_to) exportParams.set("date_to", filters.date_to);
+  if (filters.amount_min) exportParams.set("amount_min", filters.amount_min);
+  if (filters.amount_max) exportParams.set("amount_max", filters.amount_max);
+  const exportQuery = exportParams.toString();
+
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
           Expenses
         </h1>
-        <Link
-          href="/expenses/new"
-          className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
-        >
-          New Expense
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/expenses/export${exportQuery ? `?${exportQuery}` : ""}`}
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            Download Excel
+          </Link>
+          <Link
+            href="/expenses/new"
+            className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
+          >
+            New Expense
+          </Link>
+        </div>
       </div>
 
       <form className="mt-4 flex flex-wrap items-end gap-3 text-sm">
