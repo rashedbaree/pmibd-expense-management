@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { startApproval } from "@/lib/approval";
+import { getApprovalChain, startApproval } from "@/lib/approval";
 import { notifyApprover } from "@/lib/notifications";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
@@ -31,12 +31,14 @@ export async function createExpense(formData: FormData) {
     .getAll("document")
     .filter((f): f is File => f instanceof File && f.size > 0);
 
-  const [{ data: submitterProfile }, { data: portfolio }] = await Promise.all([
+  const [{ data: submitterProfile }, { data: portfolio }, chain] = await Promise.all([
     supabase.from("users").select("role, name").eq("id", user.id).single(),
     supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
+    getApprovalChain(supabase),
   ]);
 
   const { required_approval_role, current_approver_role } = startApproval(
+    chain,
     submitterProfile?.role,
   );
 
@@ -146,12 +148,14 @@ export async function createReversal(formData: FormData) {
     );
   }
 
-  const [{ data: submitterProfile }, { data: portfolio }] = await Promise.all([
+  const [{ data: submitterProfile }, { data: portfolio }, chain] = await Promise.all([
     supabase.from("users").select("role, name").eq("id", user.id).single(),
     supabase.from("portfolios").select("name").eq("id", original.portfolio_id).single(),
+    getApprovalChain(supabase),
   ]);
 
   const { required_approval_role, current_approver_role } = startApproval(
+    chain,
     submitterProfile?.role,
   );
 
@@ -250,12 +254,13 @@ export async function resubmitExpense(formData: FormData) {
     .getAll("document")
     .filter((f): f is File => f instanceof File && f.size > 0);
 
-  const [{ data: submitterProfile }, { data: portfolio }] = await Promise.all([
+  const [{ data: submitterProfile }, { data: portfolio }, chain] = await Promise.all([
     supabase.from("users").select("role, name").eq("id", user.id).single(),
     supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
+    getApprovalChain(supabase),
   ]);
 
-  const { current_approver_role } = startApproval(submitterProfile?.role);
+  const { current_approver_role } = startApproval(chain, submitterProfile?.role);
 
   const { error } = await supabase
     .from("expenses")

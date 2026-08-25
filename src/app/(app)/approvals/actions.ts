@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { nextApproverRole } from "@/lib/approval";
+import { getApprovalChain, nextApproverRole } from "@/lib/approval";
 import { notifyApprover, notifySubmitterOfReturn } from "@/lib/notifications";
 import { CHEQUE_NUMBER_MAX_LENGTH, COMMENT_MAX_LENGTH } from "@/lib/constants";
 import type { ExpenseStatus, UserRole } from "@/lib/types";
@@ -69,7 +69,9 @@ export async function actOnExpense(formData: FormData) {
     newStatus = "returned";
     newCurrentRole = null;
   } else if (intent === "approve") {
+    const chain = await getApprovalChain(supabase);
     const next = nextApproverRole(
+      chain,
       profile.role as UserRole,
       expense.required_approval_role as UserRole,
     );

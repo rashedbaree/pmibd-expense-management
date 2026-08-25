@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
@@ -93,4 +94,79 @@ export async function updateRoleVisibility(formData: FormData) {
   const full_visibility = formData.get("full_visibility") === "on";
   await supabase.from("role_full_visibility").update({ full_visibility }).eq("role", role);
   revalidatePath("/admin/visibility");
+}
+
+export async function addApprovalStep(formData: FormData) {
+  const supabase = await createClient();
+  const role = formData.get("role") as string;
+
+  const { data: existingRoles } = await supabase
+    .from("approval_chain_steps")
+    .select("role");
+  if ((existingRoles ?? []).some((r) => r.role === role)) {
+    redirect(
+      `/admin/approval-flow?error=${encodeURIComponent("That role is already in the chain.")}`,
+    );
+  }
+
+  const { data: last } = await supabase
+    .from("approval_chain_steps")
+    .select("step_order")
+    .order("step_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  await supabase
+    .from("approval_chain_steps")
+    .insert({ role, step_order: (last?.step_order ?? 0) + 1 });
+
+  revalidatePath("/admin/approval-flow");
+}
+
+export async function removeApprovalStep(formData: FormData) {
+  const supabase = await createClient();
+  const id = formData.get("id") as string;
+
+  const { count } = await supabase
+    .from("approval_chain_steps")
+    .select("id", { count: "exact", head: true });
+
+  if ((count ?? 0) <= 1) {
+    redirect(
+      `/admin/approval-flow?error=${encodeURIComponent("The approval chain must have at least one step.")}`,
+    );
+  }
+
+  await supabase.from("approval_chain_steps").delete().eq("id", id);
+  revalidatePath("/admin/approval-flow");
+}
+
+export async function moveApprovalStep(formData: FormData) {
+  const supabase = await createClient();
+  const id = formData.get("id") as string;
+  const direction = formData.get("direction") as "up" | "down";
+
+  const { data: steps } = await supabase
+    .from("approval_chain_steps")
+    .select("id, step_order")
+    .order("step_order", { ascending: true });
+  if (!steps) return;
+
+  const idx = steps.findIndex((s) => s.id === id);
+  const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (idx === -1 || swapIdx < 0 || swapIdx >= steps.length) return;
+
+  const a = steps[idx];
+  const b = steps[swapIdx];
+
+  await supabase
+    .from("approval_chain_steps")
+    .update({ step_order: b.step_order })
+    .eq("id", a.id);
+  await supabase
+    .from("approval_chain_steps")
+    .update({ step_order: a.step_order })
+    .eq("id", b.id);
+
+  revalidatePath("/admin/approval-flow");
 }
