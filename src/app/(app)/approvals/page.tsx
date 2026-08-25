@@ -27,7 +27,8 @@ export default async function ApprovalsPage({
       `id, date, amount, description, vendor, remarks, required_approval_role, entry_type,
        portfolio:portfolios(name),
        category:expense_categories(name),
-       submitter:users!expenses_submitted_by_fkey(name, email)`,
+       submitter:users!expenses_submitted_by_fkey(name, email),
+       documents:expense_documents(id, file_url)`,
     )
     .eq("current_approver_role", profile?.role ?? "__none__")
     .order("date", { ascending: true });
@@ -49,8 +50,30 @@ export default async function ApprovalsPage({
         portfolio: { name: string } | null;
         category: { name: string } | null;
         submitter: { name: string; email: string } | null;
+        documents: { id: string; file_url: string }[];
       }[]
     | null;
+
+  const documentPaths = (pending ?? []).flatMap((e) =>
+    e.documents.map((d) => d.file_url),
+  );
+  const signedUrlByPath = new Map<string, string>();
+  if (documentPaths.length > 0) {
+    const { data: signedUrls } = await supabase.storage
+      .from("expense-documents")
+      .createSignedUrls(documentPaths, 3600);
+    for (const s of signedUrls ?? []) {
+      if (s.signedUrl && !s.error) signedUrlByPath.set(s.path ?? "", s.signedUrl);
+    }
+  }
+
+  function attachmentName(fileUrl: string): string {
+    const base = fileUrl.split("/").pop() ?? fileUrl;
+    // Uploads are named "<uuid>-<original filename>"; a UUID is always 36
+    // chars, so slicing past it plus its separating dash recovers the name
+    // the submitter actually uploaded.
+    return base.length > 37 ? base.slice(37) : base;
+  }
 
   const canMarkPaid = profile?.role === "finance_director" || profile?.role === "admin";
   const { data: rawApprovedUnpaid } = canMarkPaid
@@ -145,6 +168,30 @@ export default async function ApprovalsPage({
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                       Remarks: {e.remarks}
                     </p>
+                  )}
+                  {e.documents.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                      {e.documents.map((d) => {
+                        const url = signedUrlByPath.get(d.file_url);
+                        return url ? (
+                          <a
+                            key={d.id}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-brand hover:underline"
+                          >
+                            {attachmentName(d.file_url)}
+                          </a>
+                        ) : (
+                          <span key={d.id} className="text-zinc-500">
+                            {attachmentName(d.file_url)} (unavailable)
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-500">No attachments</p>
                   )}
                 </div>
                 <p className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
