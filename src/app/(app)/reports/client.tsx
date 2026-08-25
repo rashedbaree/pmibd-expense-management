@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 type ReportRow = { label: string; count: number; amount: number };
 
 function downloadCsv(filename: string, title: string, rows: ReportRow[]) {
@@ -104,13 +106,21 @@ export default function ReportsClient({
         <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
           Reports
         </h1>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="print:hidden rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
-        >
-          Print / Save as PDF
-        </button>
+        <div className="print:hidden flex items-center gap-2">
+          <Link
+            href="/reports/unpaid"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            Unpaid Expenses Report
+          </Link>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
+          >
+            Print / Save as PDF
+          </button>
+        </div>
       </div>
 
       <ReportSection title="Period-wise" rows={periodWise} />
