@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth";
 import { signOut } from "./actions";
 
 const NAV_ITEMS = [
@@ -8,7 +9,7 @@ const NAV_ITEMS = [
   { href: "/expenses", label: "Expenses" },
   { href: "/approvals", label: "Approvals" },
   { href: "/reports", label: "Reports" },
-  { href: "/admin", label: "Admin" },
+  { href: "/admin", label: "Admin", adminOnly: true },
 ];
 
 export default async function AppLayout({
@@ -20,6 +21,10 @@ export default async function AppLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const profile = await getCurrentProfile();
+  const navItems = NAV_ITEMS.filter(
+    (item) => !item.adminOnly || profile?.role === "admin",
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -39,7 +44,7 @@ export default async function AppLayout({
             </span>
           </Link>
           <nav className="flex gap-4 border-l border-zinc-200 pl-6 text-sm text-zinc-600">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
