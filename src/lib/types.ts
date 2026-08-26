@@ -74,6 +74,16 @@ export interface Expense {
   created_at: string;
 }
 
+export interface Budget {
+  id: string;
+  portfolio_id: string;
+  category_id: string;
+  initiative_name: string | null;
+  planned_date: string | null;
+  amount: number;
+  remarks: string | null;
+}
+
 export interface BankStatementLine {
   id: string;
   date: string;

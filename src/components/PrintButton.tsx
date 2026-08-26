@@ -1,6 +1,6 @@
 "use client";
 
-export default function PrintButton() {
+export function PrintButton() {
   return (
     <button
       type="button"

@@ -10,6 +10,7 @@ const SECTIONS = [
   { href: "/admin/reconciliation", label: "Bank Reconciliation", desc: "Import expenses and bank statement, reconcile by cheque number" },
   { href: "/admin/visibility", label: "Expense Visibility", desc: "Control who can see other portfolios' expenses" },
   { href: "/admin/approval-flow", label: "Approval Flow", desc: "Configure the order of roles an expense routes through" },
+  { href: "/admin/budgets", label: "Budgets", desc: "Import the approved portfolio budgets for the Budget vs Actual report" },
 ];
 
 export default async function AdminPage() {

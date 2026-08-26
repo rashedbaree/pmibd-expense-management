@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { AccessDenied } from "@/components/AccessDenied";
-import PrintButton from "./print-button";
+import { PrintButton } from "@/components/PrintButton";
 
 type SearchParams = {
   date_from?: string;

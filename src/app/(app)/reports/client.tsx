@@ -108,6 +108,12 @@ export default function ReportsClient({
         </h1>
         <div className="print:hidden flex items-center gap-2">
           <Link
+            href="/reports/budget-vs-actual"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            Budget vs Actual
+          </Link>
+          <Link
             href="/reports/unpaid"
             className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
           >
