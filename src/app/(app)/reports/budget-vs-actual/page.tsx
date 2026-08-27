@@ -93,7 +93,7 @@ export default async function BudgetVsActualPage({
       .select(
         `amount, status, entry_type, portfolio:portfolios(name), category:expense_categories(name)`,
       )
-      .in("status", ["approved", "paid"])
+      .in("status", ["approved", "paid", "pending_approval"])
       .gte("date", selectedPeriod.start_date)
       .lte("date", selectedPeriod.end_date),
   ]);
@@ -110,23 +110,38 @@ export default async function BudgetVsActualPage({
   }
 
   const actualByKey = new Map<string, number>();
+  const committedByKey = new Map<string, number>();
   for (const e of expenses) {
     const k = key(e.portfolio?.name ?? "Unassigned", e.category?.name ?? "Uncategorized");
-    actualByKey.set(k, (actualByKey.get(k) ?? 0) + signedAmount(e));
+    const target = e.status === "pending_approval" ? committedByKey : actualByKey;
+    target.set(k, (target.get(k) ?? 0) + signedAmount(e));
   }
 
-  const allKeys = new Set([...budgetedByKey.keys(), ...actualByKey.keys()]);
+  const allKeys = new Set([
+    ...budgetedByKey.keys(),
+    ...actualByKey.keys(),
+    ...committedByKey.keys(),
+  ]);
   const rows = [...allKeys]
     .map((k) => {
       const [portfolio, category] = k.split(" :: ");
       const budgeted = budgetedByKey.get(k) ?? 0;
       const actual = actualByKey.get(k) ?? 0;
-      return { portfolio, category, budgeted, actual, remaining: budgeted - actual };
+      const committed = committedByKey.get(k) ?? 0;
+      return {
+        portfolio,
+        category,
+        budgeted,
+        actual,
+        committed,
+        remaining: budgeted - actual - committed,
+      };
     })
     .sort((a, b) => a.remaining - b.remaining);
 
   const totalBudgeted = rows.reduce((s, r) => s + r.budgeted, 0);
   const totalActual = rows.reduce((s, r) => s + r.actual, 0);
+  const totalCommitted = rows.reduce((s, r) => s + r.committed, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -137,8 +152,10 @@ export default async function BudgetVsActualPage({
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
             Approved budget per portfolio and category against approved +
-            paid expenses dated within the selected period. Rows in red have
-            spent more than budgeted. Manage figures and periods in{" "}
+            paid expenses (Actual) and expenses still awaiting approval
+            (Committed) dated within the selected period. Rows in red have
+            spent or committed more than budgeted. Manage figures and periods
+            in{" "}
             <Link href="/admin/budgets" className="text-brand hover:underline">
               Admin → Budgets
             </Link>
@@ -179,6 +196,7 @@ export default async function BudgetVsActualPage({
               <th className="px-3 py-2">Category</th>
               <th className="px-3 py-2 text-right">Budgeted</th>
               <th className="px-3 py-2 text-right">Actual</th>
+              <th className="px-3 py-2 text-right">Committed</th>
               <th className="px-3 py-2 text-right">Remaining</th>
             </tr>
           </thead>
@@ -196,6 +214,9 @@ export default async function BudgetVsActualPage({
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   {r.actual.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
+                <td className="px-3 py-2 text-right whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                  {r.committed.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </td>
                 <td
                   className={`px-3 py-2 text-right font-medium whitespace-nowrap ${
                     r.remaining < 0
@@ -209,7 +230,7 @@ export default async function BudgetVsActualPage({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-zinc-500">
+                <td colSpan={6} className="px-3 py-6 text-center text-zinc-500">
                   No budget or expense data for this period yet.
                 </td>
               </tr>
@@ -227,7 +248,10 @@ export default async function BudgetVsActualPage({
                 {totalActual.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </td>
               <td className="px-3 py-2 text-right whitespace-nowrap">
-                {(totalBudgeted - totalActual).toLocaleString(undefined, {
+                {totalCommitted.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </td>
+              <td className="px-3 py-2 text-right whitespace-nowrap">
+                {(totalBudgeted - totalActual - totalCommitted).toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                 })}
               </td>
