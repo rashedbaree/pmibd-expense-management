@@ -6,6 +6,13 @@ import { PrintButton } from "@/components/PrintButton";
 import { signedAmount } from "@/lib/expense";
 import type { EntryType, ExpenseStatus } from "@/lib/types";
 
+type PeriodRow = {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+};
+
 type BudgetRow = {
   amount: number;
   portfolio: { name: string } | null;
@@ -20,7 +27,12 @@ type ExpenseRow = {
   category: { name: string } | null;
 };
 
-export default async function BudgetVsActualPage() {
+export default async function BudgetVsActualPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period_id?: string }>;
+}) {
+  const { period_id } = await searchParams;
   const profile = await getCurrentProfile();
 
   const allowed =
@@ -42,19 +54,48 @@ export default async function BudgetVsActualPage() {
   }
 
   const supabase = await createClient();
+  const { data: rawPeriods } = await supabase
+    .from("budget_periods")
+    .select("id, name, start_date, end_date")
+    .order("start_date", { ascending: false });
+  const periods = (rawPeriods ?? []) as PeriodRow[];
 
-  // Org-wide, like the Unpaid Expenses Report - this is a finance
-  // oversight tool, not filtered by the usual portfolio visibility scope.
+  if (periods.length === 0) {
+    return (
+      <div>
+        <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
+          Budget vs Actual
+        </h1>
+        <p className="mt-4 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+          No budget periods set up yet. Add one in{" "}
+          <Link href="/admin/budgets" className="text-brand hover:underline">
+            Admin → Budgets
+          </Link>{" "}
+          first.
+        </p>
+      </div>
+    );
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const selectedPeriod =
+    periods.find((p) => p.id === period_id) ??
+    periods.find((p) => p.start_date <= today && today <= p.end_date) ??
+    periods[0];
+
   const [{ data: rawBudgets }, { data: rawExpenses }] = await Promise.all([
     supabase
       .from("budgets")
-      .select(`amount, portfolio:portfolios(name), category:expense_categories(name)`),
+      .select(`amount, portfolio:portfolios(name), category:expense_categories(name)`)
+      .eq("period_id", selectedPeriod.id),
     supabase
       .from("expenses")
       .select(
         `amount, status, entry_type, portfolio:portfolios(name), category:expense_categories(name)`,
       )
-      .in("status", ["approved", "paid"]),
+      .in("status", ["approved", "paid"])
+      .gte("date", selectedPeriod.start_date)
+      .lte("date", selectedPeriod.end_date),
   ]);
 
   const budgets = (rawBudgets ?? []) as unknown as BudgetRow[];
@@ -96,8 +137,8 @@ export default async function BudgetVsActualPage() {
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
             Approved budget per portfolio and category against approved +
-            paid expenses so far. Rows in red have spent more than budgeted.
-            Manage the budget figures in{" "}
+            paid expenses dated within the selected period. Rows in red have
+            spent more than budgeted. Manage figures and periods in{" "}
             <Link href="/admin/budgets" className="text-brand hover:underline">
               Admin → Budgets
             </Link>
@@ -106,6 +147,29 @@ export default async function BudgetVsActualPage() {
         </div>
         <PrintButton />
       </div>
+
+      <form className="print:hidden flex flex-wrap items-end gap-3 text-sm">
+        <label className="flex flex-col gap-1">
+          Period
+          <select
+            name="period_id"
+            defaultValue={selectedPeriod.id}
+            className="rounded-md border border-zinc-300 px-2 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            {periods.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.start_date} → {p.end_date})
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="submit"
+          className="rounded-md border border-zinc-300 px-3 py-1.5 dark:border-zinc-700"
+        >
+          Apply
+        </button>
+      </form>
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
         <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
@@ -146,7 +210,7 @@ export default async function BudgetVsActualPage() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-zinc-500">
-                  No budget or expense data yet.
+                  No budget or expense data for this period yet.
                 </td>
               </tr>
             )}

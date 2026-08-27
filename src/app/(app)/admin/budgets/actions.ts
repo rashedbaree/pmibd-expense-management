@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 
-const REQUIRED_COLUMNS = ["portfolio", "category", "amount"];
+const REQUIRED_COLUMNS = ["period", "portfolio", "category", "amount"];
 const MAX_REPORTED_ERRORS = 20;
 
 function normalize(value: unknown): string {
@@ -67,9 +67,10 @@ export async function importBudgets(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const [{ data: portfolios }, { data: categories }] = await Promise.all([
+  const [{ data: portfolios }, { data: categories }, { data: periods }] = await Promise.all([
     supabase.from("portfolios").select("id, name"),
     supabase.from("expense_categories").select("id, name"),
+    supabase.from("budget_periods").select("id, name"),
   ]);
 
   const portfolioMap = new Map(
@@ -78,6 +79,15 @@ export async function importBudgets(formData: FormData) {
   const categoryMap = new Map(
     (categories ?? []).map((c) => [c.name.trim().toLowerCase(), c.id as string]),
   );
+  const periodMap = new Map(
+    (periods ?? []).map((p) => [p.name.trim().toLowerCase(), p.id as string]),
+  );
+
+  if (periodMap.size === 0) {
+    redirect(
+      `/admin/budgets?error=${encodeURIComponent("Add a budget period first (below) before importing.")}`,
+    );
+  }
 
   const toInsert: Record<string, unknown>[] = [];
   const errors: string[] = [];
@@ -86,12 +96,19 @@ export async function importBudgets(formData: FormData) {
     const rowNum = index + 2;
     const row = lowerKeyedRow(rawRow);
 
+    const periodName = normalize(row.period);
     const portfolioName = normalize(row.portfolio);
     const categoryName = normalize(row.category);
     const amountRaw = normalize(row.amount);
 
-    if (!portfolioName || !categoryName || !amountRaw) {
+    if (!periodName || !portfolioName || !categoryName || !amountRaw) {
       errors.push(`Row ${rowNum}: missing a required field.`);
+      return;
+    }
+
+    const period_id = periodMap.get(periodName.toLowerCase());
+    if (!period_id) {
+      errors.push(`Row ${rowNum}: unknown period "${periodName}".`);
       return;
     }
 
@@ -114,6 +131,7 @@ export async function importBudgets(formData: FormData) {
     }
 
     toInsert.push({
+      period_id,
       portfolio_id,
       category_id,
       initiative_name: normalize(row.initiative) || null,
@@ -160,6 +178,50 @@ export async function deleteBudget(formData: FormData) {
   const id = formData.get("id") as string;
   const supabase = await createClient();
   await supabase.from("budgets").delete().eq("id", id);
+
+  revalidatePath("/admin/budgets");
+  revalidatePath("/reports/budget-vs-actual");
+}
+
+export async function addBudgetPeriod(formData: FormData) {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "admin") return;
+
+  const name = (formData.get("name") as string).trim();
+  const start_date = formData.get("start_date") as string;
+  const end_date = formData.get("end_date") as string;
+
+  if (!name || !start_date || !end_date) {
+    redirect(
+      `/admin/budgets?error=${encodeURIComponent("Name, start date, and end date are all required.")}`,
+    );
+  }
+  if (end_date < start_date) {
+    redirect(
+      `/admin/budgets?error=${encodeURIComponent("End date can't be before the start date.")}`,
+    );
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("budget_periods")
+    .insert({ name, start_date, end_date });
+
+  if (error) {
+    redirect(`/admin/budgets?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/admin/budgets");
+  revalidatePath("/reports/budget-vs-actual");
+}
+
+export async function deleteBudgetPeriod(formData: FormData) {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "admin") return;
+
+  const id = formData.get("id") as string;
+  const supabase = await createClient();
+  await supabase.from("budget_periods").delete().eq("id", id);
 
   revalidatePath("/admin/budgets");
   revalidatePath("/reports/budget-vs-actual");
