@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
+import { getBudgetSnapshot } from "@/lib/budget";
 import { resubmitExpense } from "../../actions";
 import EditExpenseForm from "./form";
 
@@ -17,26 +18,33 @@ export default async function EditExpensePage({
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
 
-  const [{ data: expense }, { data: portfolios }, { data: events }, { data: categories }, { data: vendorRows }] =
-    await Promise.all([
-      supabase
-        .from("expenses")
-        .select(
-          "id, date, portfolio_id, event_id, category_id, description, vendor, payment_method, amount, remarks, status, submitted_by",
-        )
-        .eq("id", id)
-        .single(),
-      supabase.from("portfolios").select("id, name").order("name"),
-      supabase
-        .from("events")
-        .select("id, name, date, portfolio_id")
-        .order("date", { ascending: false }),
-      supabase
-        .from("expense_categories")
-        .select("id, name, parent_category_id")
-        .order("name"),
-      supabase.from("expenses").select("vendor").not("vendor", "is", null),
-    ]);
+  const [
+    { data: expense },
+    { data: portfolios },
+    { data: events },
+    { data: categories },
+    { data: vendorRows },
+    budgetSnapshot,
+  ] = await Promise.all([
+    supabase
+      .from("expenses")
+      .select(
+        "id, date, portfolio_id, event_id, category_id, description, vendor, payment_method, amount, remarks, status, submitted_by",
+      )
+      .eq("id", id)
+      .single(),
+    supabase.from("portfolios").select("id, name").order("name"),
+    supabase
+      .from("events")
+      .select("id, name, date, portfolio_id")
+      .order("date", { ascending: false }),
+    supabase
+      .from("expense_categories")
+      .select("id, name, parent_category_id")
+      .order("name"),
+    supabase.from("expenses").select("vendor").not("vendor", "is", null),
+    getBudgetSnapshot(supabase),
+  ]);
 
   const vendors = [
     ...new Set(
@@ -95,6 +103,7 @@ export default async function EditExpensePage({
             events={events ?? []}
             categories={categories ?? []}
             vendors={vendors}
+            budgetSnapshot={budgetSnapshot}
             defaults={{
               date: expense.date,
               portfolio_id: expense.portfolio_id,

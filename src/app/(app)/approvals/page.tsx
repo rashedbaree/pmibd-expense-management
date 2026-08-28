@@ -24,7 +24,7 @@ export default async function ApprovalsPage({
   let pendingQuery = supabase
     .from("expenses")
     .select(
-      `id, date, amount, description, vendor, remarks, required_approval_role, entry_type,
+      `id, date, amount, description, vendor, remarks, required_approval_role, entry_type, over_budget,
        portfolio:portfolios(name),
        category:expense_categories(name),
        submitter:users!expenses_submitted_by_fkey(name, email),
@@ -47,6 +47,7 @@ export default async function ApprovalsPage({
         vendor: string | null;
         remarks: string | null;
         entry_type: "expense" | "reversal";
+        over_budget: boolean;
         portfolio: { name: string } | null;
         category: { name: string } | null;
         submitter: { name: string; email: string } | null;
@@ -153,12 +154,23 @@ export default async function ApprovalsPage({
                         Reversal
                       </span>
                     )}
+                    {e.over_budget && (
+                      <span className="mr-1.5 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400">
+                        Over Budget
+                      </span>
+                    )}
                     {e.description}
                   </p>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     {e.portfolio?.name} · {e.category?.name} · {e.date} ·
                     submitted by {e.submitter?.name}
                   </p>
+                  {e.over_budget && (
+                    <p className="mt-1 text-sm font-medium text-red-700 dark:text-red-400">
+                      This expense pushes {e.portfolio?.name} · {e.category?.name} over its
+                      approved budget and requires Finance Director approval.
+                    </p>
+                  )}
                   {e.vendor && (
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                       Vendor: {e.vendor}

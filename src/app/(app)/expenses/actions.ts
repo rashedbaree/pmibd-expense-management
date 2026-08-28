@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getApprovalChain, startApproval } from "@/lib/approval";
+import {
+  getApprovalChain,
+  startApproval,
+  chainWithMandatoryFinanceApproval,
+} from "@/lib/approval";
+import { checkBudget } from "@/lib/budget";
 import { notifyApprover } from "@/lib/notifications";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
@@ -31,14 +36,16 @@ export async function createExpense(formData: FormData) {
     .getAll("document")
     .filter((f): f is File => f instanceof File && f.size > 0);
 
-  const [{ data: submitterProfile }, { data: portfolio }, chain] = await Promise.all([
-    supabase.from("users").select("role, name").eq("id", user.id).single(),
-    supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
-    getApprovalChain(supabase),
-  ]);
+  const [{ data: submitterProfile }, { data: portfolio }, chain, budgetCheck] =
+    await Promise.all([
+      supabase.from("users").select("role, name").eq("id", user.id).single(),
+      supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
+      getApprovalChain(supabase),
+      checkBudget(supabase, { portfolioId: portfolio_id, categoryId: category_id, date, amount }),
+    ]);
 
   const { required_approval_role, current_approver_role } = startApproval(
-    chain,
+    chainWithMandatoryFinanceApproval(chain, budgetCheck.overBudget),
     submitterProfile?.role,
   );
 
@@ -58,6 +65,7 @@ export async function createExpense(formData: FormData) {
       submitted_by: user.id,
       required_approval_role,
       current_approver_role,
+      over_budget: budgetCheck.overBudget,
     })
     .select()
     .single();
@@ -87,7 +95,7 @@ export async function createExpense(formData: FormData) {
     entity_id: expense.id,
     action: "submitted",
     actor_id: user.id,
-    details: { amount, required_approval_role },
+    details: { amount, required_approval_role, over_budget: budgetCheck.overBudget },
   });
 
   await notifyApprover(supabase, current_approver_role, {
@@ -96,6 +104,7 @@ export async function createExpense(formData: FormData) {
     date,
     portfolioName: portfolio?.name ?? null,
     submitterName: submitterProfile?.name ?? null,
+    overBudget: budgetCheck.overBudget,
   });
 
   redirect("/expenses");
@@ -254,13 +263,18 @@ export async function resubmitExpense(formData: FormData) {
     .getAll("document")
     .filter((f): f is File => f instanceof File && f.size > 0);
 
-  const [{ data: submitterProfile }, { data: portfolio }, chain] = await Promise.all([
-    supabase.from("users").select("role, name").eq("id", user.id).single(),
-    supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
-    getApprovalChain(supabase),
-  ]);
+  const [{ data: submitterProfile }, { data: portfolio }, chain, budgetCheck] =
+    await Promise.all([
+      supabase.from("users").select("role, name").eq("id", user.id).single(),
+      supabase.from("portfolios").select("name").eq("id", portfolio_id).single(),
+      getApprovalChain(supabase),
+      checkBudget(supabase, { portfolioId: portfolio_id, categoryId: category_id, date, amount }),
+    ]);
 
-  const { current_approver_role } = startApproval(chain, submitterProfile?.role);
+  const { required_approval_role, current_approver_role } = startApproval(
+    chainWithMandatoryFinanceApproval(chain, budgetCheck.overBudget),
+    submitterProfile?.role,
+  );
 
   const { error } = await supabase
     .from("expenses")
@@ -275,7 +289,9 @@ export async function resubmitExpense(formData: FormData) {
       amount,
       remarks,
       status: "pending_approval",
+      required_approval_role,
       current_approver_role,
+      over_budget: budgetCheck.overBudget,
     })
     .eq("id", expenseId);
 
@@ -304,7 +320,7 @@ export async function resubmitExpense(formData: FormData) {
     entity_id: expenseId,
     action: "resubmitted",
     actor_id: user.id,
-    details: { amount },
+    details: { amount, over_budget: budgetCheck.overBudget },
   });
 
   await notifyApprover(supabase, current_approver_role, {
@@ -313,6 +329,7 @@ export async function resubmitExpense(formData: FormData) {
     date,
     portfolioName: portfolio?.name ?? null,
     submitterName: submitterProfile?.name ?? null,
+    overBudget: budgetCheck.overBudget,
   });
 
   revalidatePath("/expenses");

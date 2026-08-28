@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { EventRow, ExpenseCategory, Portfolio } from "@/lib/types";
+import type { BudgetSnapshot } from "@/lib/budget";
+import {
+  useBudgetWarning,
+  BudgetWarningBanner,
+  BudgetWarningModal,
+} from "@/components/BudgetWarning";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
 const PAYMENT_METHODS = [
@@ -22,17 +28,41 @@ export default function NewExpenseForm({
   events,
   categories,
   vendors,
+  budgetSnapshot,
 }: {
   action: (formData: FormData) => void;
   portfolios: Portfolio[];
   events: EventRow[];
   categories: ExpenseCategory[];
   vendors: string[];
+  budgetSnapshot: BudgetSnapshot;
 }) {
   const [portfolioId, setPortfolioId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [amount, setAmount] = useState(0);
   const [fileError, setFileError] = useState<string | null>(null);
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [remarksLength, setRemarksLength] = useState(0);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+
+  const formRef = useRef<HTMLFormElement>(null);
+  const budgetAcknowledgedRef = useRef(false);
+
+  const budgetWarning = useBudgetWarning(budgetSnapshot, portfolioId, categoryId, date, amount);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (budgetWarning && !budgetAcknowledgedRef.current) {
+      e.preventDefault();
+      setShowBudgetModal(true);
+    }
+  }
+
+  function confirmOverBudgetSubmit() {
+    budgetAcknowledgedRef.current = true;
+    setShowBudgetModal(false);
+    formRef.current?.requestSubmit();
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -63,7 +93,9 @@ export default function NewExpenseForm({
 
   return (
     <form
+      ref={formRef}
       action={action}
+      onSubmit={handleSubmit}
       className="mt-6 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2"
     >
       <label className="flex flex-col gap-1 text-sm">
@@ -72,7 +104,8 @@ export default function NewExpenseForm({
           name="date"
           type="date"
           required
-          defaultValue={new Date().toISOString().slice(0, 10)}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
           className={inputClass}
         />
       </label>
@@ -85,6 +118,8 @@ export default function NewExpenseForm({
           step="0.01"
           min="0.01"
           required
+          value={amount || ""}
+          onChange={(e) => setAmount(Number(e.target.value) || 0)}
           className={inputClass}
         />
       </label>
@@ -123,7 +158,13 @@ export default function NewExpenseForm({
 
       <label className="flex flex-col gap-1 text-sm">
         Category
-        <select name="category_id" required defaultValue="" className={inputClass}>
+        <select
+          name="category_id"
+          required
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          className={inputClass}
+        >
           <option value="" disabled>
             Select category
           </option>
@@ -218,6 +259,8 @@ export default function NewExpenseForm({
         </span>
       </label>
 
+      <BudgetWarningBanner warning={budgetWarning} />
+
       <div className="sm:col-span-2">
         <button
           type="submit"
@@ -226,6 +269,14 @@ export default function NewExpenseForm({
           Submit Expense
         </button>
       </div>
+
+      {showBudgetModal && budgetWarning && (
+        <BudgetWarningModal
+          warning={budgetWarning}
+          onCancel={() => setShowBudgetModal(false)}
+          onConfirm={confirmOverBudgetSubmit}
+        />
+      )}
     </form>
   );
 }

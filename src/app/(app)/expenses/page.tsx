@@ -56,7 +56,7 @@ export default async function ExpensesPage({
   let query = supabase
     .from("expenses")
     .select(
-      `id, date, amount, status, description, vendor, cheque_number, entry_type, reverses_expense_id, submitted_by,
+      `id, date, amount, status, description, vendor, cheque_number, entry_type, reverses_expense_id, submitted_by, over_budget,
        portfolio:portfolios(name),
        category:expense_categories(name),
        submitter:users!expenses_submitted_by_fkey(name)`,
@@ -89,6 +89,7 @@ export default async function ExpensesPage({
         entry_type: "expense" | "reversal";
         reverses_expense_id: string | null;
         submitted_by: string;
+        over_budget: boolean;
         portfolio: { name: string } | null;
         category: { name: string } | null;
         submitter: { name: string } | null;
@@ -292,6 +293,11 @@ export default async function ExpensesPage({
                     {isReversal && (
                       <span className="mr-1.5 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                         Reversal
+                      </span>
+                    )}
+                    {e.over_budget && (
+                      <span className="mr-1.5 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-400">
+                        Over Budget
                       </span>
                     )}
                     {e.description}

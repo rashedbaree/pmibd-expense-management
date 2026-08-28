@@ -27,6 +27,18 @@ export function nextApproverRole(
   return chain[idx + 1] ?? null;
 }
 
+// Guarantees a finance_director sign-off on an over-budget expense even if
+// the admin-configured chain doesn't include that role. Leaves the chain
+// untouched when it already does - finance_director then approves at their
+// normal step, same as any other expense.
+export function chainWithMandatoryFinanceApproval(
+  chain: UserRole[],
+  overBudget: boolean,
+): UserRole[] {
+  if (!overBudget || chain.includes("finance_director")) return chain;
+  return [...chain, "finance_director"];
+}
+
 export function startApproval(
   chain: UserRole[],
   submitterRole: UserRole | undefined,
