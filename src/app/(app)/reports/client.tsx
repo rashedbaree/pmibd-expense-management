@@ -20,6 +20,9 @@ function formatChartAmount(n: number) {
 
 type ReportRow = { label: string; count: number; amount: number };
 
+const inputClass =
+  "rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+
 const OTHER_REPORTS = [
   {
     href: "/reports/budget-vs-actual",
@@ -122,12 +125,18 @@ export default function ReportsClient({
   portfolioWise,
   eventWise,
   approvalStatus,
+  dateFrom,
+  dateTo,
+  showAll,
 }: {
   periodWise: ReportRow[];
   categoryWise: ReportRow[];
   portfolioWise: ReportRow[];
   eventWise: ReportRow[];
   approvalStatus: ReportRow[];
+  dateFrom: string;
+  dateTo: string;
+  showAll: boolean;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -144,16 +153,44 @@ export default function ReportsClient({
         </button>
       </div>
 
+      <form className="print:hidden flex flex-wrap items-end gap-3 text-sm">
+        <label className="flex flex-col gap-1">
+          From
+          <input type="date" name="date_from" defaultValue={dateFrom} className={inputClass} />
+        </label>
+        <label className="flex flex-col gap-1">
+          To
+          <input type="date" name="date_to" defaultValue={dateTo} className={inputClass} />
+        </label>
+        <button
+          type="submit"
+          className="rounded-md border border-zinc-300 px-3 py-1.5 dark:border-zinc-700"
+        >
+          Filter
+        </button>
+        <Link href="/reports" className="px-3 py-1.5 text-zinc-500 hover:underline">
+          Last 12 months
+        </Link>
+        <Link href="/reports?all=1" className="px-3 py-1.5 text-zinc-500 hover:underline">
+          All time
+        </Link>
+      </form>
+
       <section>
         <h2 className="text-lg font-medium text-zinc-950 dark:text-zinc-50">
           Overview
         </h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          {showAll ? "All time" : `${dateFrom || "the beginning"} to ${dateTo || "today"}`} ·
+          approved + paid expenses only (excludes drafts, pending approval,
+          returned, and rejected).
+        </p>
         <div className="mt-3 grid grid-cols-1 gap-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 lg:grid-cols-3">
           <TrendColumnChart
             title="Monthly Spend Trend"
             data={[...periodWise]
               .sort((a, b) => a.label.localeCompare(b.label))
-              .slice(-12)
+              .slice(-24)
               .map((r) => ({ label: r.label, value: r.amount }))}
             colorVar="--chart-series-1"
             formatValue={formatChartAmount}
