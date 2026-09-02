@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { EventRow, ExpenseCategory, Portfolio } from "@/lib/types";
+import type { BudgetSnapshot } from "@/lib/budget";
+import {
+  useBudgetWarning,
+  BudgetWarningBanner,
+  BudgetWarningModal,
+} from "@/components/BudgetWarning";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
 const PAYMENT_METHODS = [
@@ -35,6 +41,7 @@ export default function EditExpenseForm({
   events,
   categories,
   vendors,
+  budgetSnapshot,
   defaults,
 }: {
   action: (formData: FormData) => void;
@@ -43,9 +50,13 @@ export default function EditExpenseForm({
   events: EventRow[];
   categories: ExpenseCategory[];
   vendors: string[];
+  budgetSnapshot: BudgetSnapshot;
   defaults: ExpenseDefaults;
 }) {
   const [portfolioId, setPortfolioId] = useState(defaults.portfolio_id);
+  const [categoryId, setCategoryId] = useState(defaults.category_id);
+  const [date, setDate] = useState(defaults.date);
+  const [amount, setAmount] = useState(Number(defaults.amount) || 0);
   const [fileError, setFileError] = useState<string | null>(null);
   const [descriptionLength, setDescriptionLength] = useState(
     defaults.description.length,
@@ -53,6 +64,25 @@ export default function EditExpenseForm({
   const [remarksLength, setRemarksLength] = useState(
     defaults.remarks?.length ?? 0,
   );
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+
+  const formRef = useRef<HTMLFormElement>(null);
+  const budgetAcknowledgedRef = useRef(false);
+
+  const budgetWarning = useBudgetWarning(budgetSnapshot, portfolioId, categoryId, date, amount);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (budgetWarning && !budgetAcknowledgedRef.current) {
+      e.preventDefault();
+      setShowBudgetModal(true);
+    }
+  }
+
+  function confirmOverBudgetSubmit() {
+    budgetAcknowledgedRef.current = true;
+    setShowBudgetModal(false);
+    formRef.current?.requestSubmit();
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -83,7 +113,9 @@ export default function EditExpenseForm({
 
   return (
     <form
+      ref={formRef}
       action={action}
+      onSubmit={handleSubmit}
       className="mt-6 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2"
     >
       <input type="hidden" name="expense_id" value={expenseId} />
@@ -93,7 +125,8 @@ export default function EditExpenseForm({
           name="date"
           type="date"
           required
-          defaultValue={defaults.date}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
           className={inputClass}
         />
       </label>
@@ -106,7 +139,8 @@ export default function EditExpenseForm({
           step="0.01"
           min="0.01"
           required
-          defaultValue={defaults.amount}
+          value={amount || ""}
+          onChange={(e) => setAmount(Number(e.target.value) || 0)}
           className={inputClass}
         />
       </label>
@@ -152,7 +186,8 @@ export default function EditExpenseForm({
         <select
           name="category_id"
           required
-          defaultValue={defaults.category_id}
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
           className={inputClass}
         >
           <option value="" disabled>
@@ -252,6 +287,8 @@ export default function EditExpenseForm({
         </span>
       </label>
 
+      <BudgetWarningBanner warning={budgetWarning} />
+
       <div className="sm:col-span-2">
         <button
           type="submit"
@@ -260,6 +297,14 @@ export default function EditExpenseForm({
           Resubmit for Approval
         </button>
       </div>
+
+      {showBudgetModal && budgetWarning && (
+        <BudgetWarningModal
+          warning={budgetWarning}
+          onCancel={() => setShowBudgetModal(false)}
+          onConfirm={confirmOverBudgetSubmit}
+        />
+      )}
     </form>
   );
 }

@@ -18,6 +18,7 @@ type ExpenseSummary = {
   date: string;
   portfolioName: string | null;
   submitterName: string | null;
+  overBudget?: boolean;
 };
 
 // Notifies whoever currently holds `role` that an expense is waiting on
@@ -50,6 +51,11 @@ export async function notifyApprover(
 
   const html = `
     <p>An expense is waiting for your approval.</p>
+    ${
+      expense.overBudget
+        ? `<p style="color:#b91c1c;font-weight:bold;">⚠ This expense exceeds the budgeted amount for its portfolio/category and requires Finance Director approval.</p>`
+        : ""
+    }
     <table cellpadding="4" style="border-collapse: collapse;">
       <tr><td><strong>Submitted by</strong></td><td>${expense.submitterName ?? "-"}</td></tr>
       <tr><td><strong>Portfolio</strong></td><td>${expense.portfolioName ?? "-"}</td></tr>
@@ -61,7 +67,11 @@ export async function notifyApprover(
     <p style="color:#666;font-size:12px;">PMI Bangladesh Expense Management System</p>
   `;
 
-  await sendMail(emails, "Expense pending your approval", html);
+  await sendMail(
+    emails,
+    expense.overBudget ? "Over-budget expense pending your approval" : "Expense pending your approval",
+    html,
+  );
 }
 
 // Notifies the submitter that their expense was returned, with the

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getBudgetSnapshot } from "@/lib/budget";
 import { createExpense } from "../actions";
 import NewExpenseForm from "./form";
 
@@ -10,19 +11,25 @@ export default async function NewExpensePage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: portfolios }, { data: events }, { data: categories }, { data: vendorRows }] =
-    await Promise.all([
-      supabase.from("portfolios").select("id, name").order("name"),
-      supabase
-        .from("events")
-        .select("id, name, date, portfolio_id")
-        .order("date", { ascending: false }),
-      supabase
-        .from("expense_categories")
-        .select("id, name, parent_category_id")
-        .order("name"),
-      supabase.from("expenses").select("vendor").not("vendor", "is", null),
-    ]);
+  const [
+    { data: portfolios },
+    { data: events },
+    { data: categories },
+    { data: vendorRows },
+    budgetSnapshot,
+  ] = await Promise.all([
+    supabase.from("portfolios").select("id, name").order("name"),
+    supabase
+      .from("events")
+      .select("id, name, date, portfolio_id")
+      .order("date", { ascending: false }),
+    supabase
+      .from("expense_categories")
+      .select("id, name, parent_category_id")
+      .order("name"),
+    supabase.from("expenses").select("vendor").not("vendor", "is", null),
+    getBudgetSnapshot(supabase),
+  ]);
 
   const vendors = [
     ...new Set(
@@ -50,6 +57,7 @@ export default async function NewExpensePage({
         events={events ?? []}
         categories={categories ?? []}
         vendors={vendors}
+        budgetSnapshot={budgetSnapshot}
       />
     </div>
   );

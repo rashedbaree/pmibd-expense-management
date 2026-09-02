@@ -3,7 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getApprovalChain, nextApproverRole } from "@/lib/approval";
+import {
+  getApprovalChain,
+  nextApproverRole,
+  chainWithMandatoryFinanceApproval,
+} from "@/lib/approval";
 import { notifyApprover, notifySubmitterOfReturn } from "@/lib/notifications";
 import { CHEQUE_NUMBER_MAX_LENGTH, COMMENT_MAX_LENGTH } from "@/lib/constants";
 import type { ExpenseStatus, UserRole } from "@/lib/types";
@@ -29,7 +33,7 @@ export async function actOnExpense(formData: FormData) {
   const { data: expense } = await supabase
     .from("expenses")
     .select(
-      `status, portfolio_id, current_approver_role, required_approval_role,
+      `status, portfolio_id, current_approver_role, required_approval_role, over_budget,
        description, amount, date,
        portfolio:portfolios(name),
        submitter:users!expenses_submitted_by_fkey(name, email)`,
@@ -69,7 +73,10 @@ export async function actOnExpense(formData: FormData) {
     newStatus = "returned";
     newCurrentRole = null;
   } else if (intent === "approve") {
-    const chain = await getApprovalChain(supabase);
+    const chain = chainWithMandatoryFinanceApproval(
+      await getApprovalChain(supabase),
+      expense.over_budget,
+    );
     const next = nextApproverRole(
       chain,
       profile.role as UserRole,
@@ -109,6 +116,7 @@ export async function actOnExpense(formData: FormData) {
       date: expense.date,
       portfolioName: portfolio?.name ?? null,
       submitterName: submitter?.name ?? null,
+      overBudget: expense.over_budget,
     });
   } else if (intent === "return") {
     await notifySubmitterOfReturn(

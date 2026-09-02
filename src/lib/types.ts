@@ -71,6 +71,7 @@ export interface Expense {
   reverses_expense_id: string | null;
   required_approval_role: UserRole | null;
   current_approver_role: UserRole | null;
+  over_budget: boolean;
   created_at: string;
 }
 
