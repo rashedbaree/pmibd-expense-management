@@ -40,6 +40,31 @@
   }
 }
 
+/* Chart palette (see dataviz skill's reference/palette.md) - a magnitude
+   chart uses one hue per chart, drawn from the categorical slot order, so
+   several charts on one page stay visually distinct without turning any
+   single chart into a rainbow. */
+.viz-root {
+  --chart-text-primary: #0b0b0b;
+  --chart-text-secondary: #52514e;
+  --chart-text-muted: #898781;
+  --chart-grid: #e1e0d9;
+  --chart-series-1: #2a78d6; /* blue */
+  --chart-series-2: #eb6834; /* orange */
+  --chart-series-3: #1baf7a; /* aqua */
+}
+@media (prefers-color-scheme: dark) {
+  .viz-root {
+    --chart-text-primary: #ffffff;
+    --chart-text-secondary: #c3c2b7;
+    --chart-text-muted: #898781;
+    --chart-grid: #2c2c2a;
+    --chart-series-1: #3987e5;
+    --chart-series-2: #d95926;
+    --chart-series-3: #199e70;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

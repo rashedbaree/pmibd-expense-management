@@ -1,8 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import { RankedBarChart, TrendColumnChart } from "@/components/charts/BarCharts";
+
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+function formatMonthLabel(label: string) {
+  const [year, month] = label.split("-");
+  const idx = Number(month) - 1;
+  return MONTH_NAMES[idx] ? `${MONTH_NAMES[idx]} '${year.slice(2)}` : label;
+}
+
+function formatChartAmount(n: number) {
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
 
 type ReportRow = { label: string; count: number; amount: number };
+
+const OTHER_REPORTS = [
+  {
+    href: "/reports/budget-vs-actual",
+    label: "Budget vs Actual",
+    desc: "Approved budget vs actual spend per portfolio and category",
+  },
+  {
+    href: "/reports/unpaid",
+    label: "Unpaid Expenses Report",
+    desc: "Approved expenses awaiting payment, for Finance/President sign-off",
+  },
+];
 
 function downloadCsv(filename: string, title: string, rows: ReportRow[]) {
   const lines = [
@@ -102,32 +131,66 @@ export default function ReportsClient({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
           Reports
         </h1>
-        <div className="print:hidden flex items-center gap-2">
-          <Link
-            href="/reports/budget-vs-actual"
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
-          >
-            Budget vs Actual
-          </Link>
-          <Link
-            href="/reports/unpaid"
-            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
-          >
-            Unpaid Expenses Report
-          </Link>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
-          >
-            Print / Save as PDF
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="print:hidden rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90"
+        >
+          Print / Save as PDF
+        </button>
       </div>
+
+      <section>
+        <h2 className="text-lg font-medium text-zinc-950 dark:text-zinc-50">
+          Overview
+        </h2>
+        <div className="mt-3 grid grid-cols-1 gap-6 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800 lg:grid-cols-3">
+          <TrendColumnChart
+            title="Monthly Spend Trend"
+            data={[...periodWise]
+              .sort((a, b) => a.label.localeCompare(b.label))
+              .slice(-12)
+              .map((r) => ({ label: r.label, value: r.amount }))}
+            colorVar="--chart-series-1"
+            formatValue={formatChartAmount}
+            formatLabel={formatMonthLabel}
+          />
+          <RankedBarChart
+            title="Top Portfolios by Spend"
+            data={portfolioWise.map((r) => ({ label: r.label, value: r.amount }))}
+            colorVar="--chart-series-2"
+            formatValue={formatChartAmount}
+          />
+          <RankedBarChart
+            title="Top Categories by Spend"
+            data={categoryWise.map((r) => ({ label: r.label, value: r.amount }))}
+            colorVar="--chart-series-3"
+            formatValue={formatChartAmount}
+          />
+        </div>
+      </section>
+
+      <section className="print:hidden">
+        <h2 className="text-lg font-medium text-zinc-950 dark:text-zinc-50">
+          Other Reports
+        </h2>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {OTHER_REPORTS.map((r) => (
+            <Link
+              key={r.href}
+              href={r.href}
+              className="rounded-lg border border-zinc-200 p-4 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+            >
+              <p className="font-medium text-zinc-950 dark:text-zinc-50">{r.label}</p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">{r.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <ReportSection title="Period-wise" rows={periodWise} />
       <ReportSection title="Category-wise" rows={categoryWise} />
