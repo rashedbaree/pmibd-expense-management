@@ -3,9 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { getVisibilityScope } from "@/lib/visibility";
 import { getSpendBreakdown, resolveDateRange, type DateRangeFilters } from "@/lib/reportsData";
-import ReportsClient from "./client";
+import OverviewClient from "./client";
 
-export default async function ReportsPage({
+export default async function ReportsOverviewPage({
   searchParams,
 }: {
   searchParams: Promise<DateRangeFilters>;
@@ -17,16 +17,17 @@ export default async function ReportsPage({
 
   const scope = await getVisibilityScope(supabase, profile);
   const range = resolveDateRange(filters);
-  const { periodWise, categoryWise, portfolioWise, eventWise, approvalStatus } =
-    await getSpendBreakdown(supabase, scope, range);
+  const { periodWise, categoryWise, portfolioWise } = await getSpendBreakdown(
+    supabase,
+    scope,
+    range,
+  );
 
   return (
-    <ReportsClient
+    <OverviewClient
       periodWise={periodWise}
       categoryWise={categoryWise}
       portfolioWise={portfolioWise}
-      eventWise={eventWise}
-      approvalStatus={approvalStatus}
       dateFrom={range.dateFrom}
       dateTo={range.dateTo}
       showAll={range.showAll}
