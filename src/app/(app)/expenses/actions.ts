@@ -107,7 +107,7 @@ export async function createExpense(formData: FormData) {
     overBudget: budgetCheck.overBudget,
   });
 
-  redirect("/expenses");
+  redirect(`/expenses?success=${encodeURIComponent("Expense submitted for approval.")}`);
 }
 
 export async function createReversal(formData: FormData) {
@@ -218,7 +218,7 @@ export async function createReversal(formData: FormData) {
   });
 
   revalidatePath("/expenses");
-  redirect("/expenses");
+  redirect(`/expenses?success=${encodeURIComponent("Reversal submitted for approval.")}`);
 }
 
 export async function resubmitExpense(formData: FormData) {
@@ -334,5 +334,5 @@ export async function resubmitExpense(formData: FormData) {
 
   revalidatePath("/expenses");
   revalidatePath("/approvals");
-  redirect("/expenses");
+  redirect(`/expenses?success=${encodeURIComponent("Expense resubmitted for approval.")}`);
 }

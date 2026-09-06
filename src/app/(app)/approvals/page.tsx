@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { actOnExpense, markAsPaid } from "./actions";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { CHEQUE_NUMBER_MAX_LENGTH, COMMENT_MAX_LENGTH } from "@/lib/constants";
 
 export default async function ApprovalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; success?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, success } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -130,6 +131,12 @@ export default async function ApprovalsPage({
         </p>
       </div>
 
+      {success && (
+        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+          {success}
+        </p>
+      )}
+
       {error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">
           {error}
@@ -225,27 +232,30 @@ export default async function ApprovalsPage({
                     className="rounded-md border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
                   />
                 </label>
-                <button
+                <ConfirmSubmitButton
                   name="intent"
                   value="approve"
+                  confirmMessage="Approve this expense?"
                   className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   Approve
-                </button>
-                <button
+                </ConfirmSubmitButton>
+                <ConfirmSubmitButton
                   name="intent"
                   value="return"
+                  confirmMessage="Return this expense to the submitter for correction?"
                   className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-600"
                 >
                   Return
-                </button>
-                <button
+                </ConfirmSubmitButton>
+                <ConfirmSubmitButton
                   name="intent"
                   value="reject"
+                  confirmMessage="Reject this expense? This cannot be undone."
                   className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
                 >
                   Reject
-                </button>
+                </ConfirmSubmitButton>
               </form>
             </div>
           ))}
@@ -290,9 +300,12 @@ export default async function ApprovalsPage({
                       />
                     </label>
                   )}
-                  <button className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700">
+                  <ConfirmSubmitButton
+                    confirmMessage="Mark this expense as paid?"
+                    className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
+                  >
                     Mark as Paid
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               </div>
             ))}

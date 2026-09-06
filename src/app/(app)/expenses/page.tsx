@@ -28,6 +28,7 @@ type SearchParams = {
   date_to?: string;
   amount_min?: string;
   amount_max?: string;
+  success?: string;
 };
 
 export default async function ExpensesPage({
@@ -246,6 +247,12 @@ export default async function ExpensesPage({
           Clear
         </Link>
       </form>
+
+      {filters.success && (
+        <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+          {filters.success}
+        </p>
+      )}
 
       {error && (
         <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-400">

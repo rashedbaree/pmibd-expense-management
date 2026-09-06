@@ -67,20 +67,26 @@ export default function EditExpenseForm({
   const [showBudgetModal, setShowBudgetModal] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
-  const budgetAcknowledgedRef = useRef(false);
+  const confirmedRef = useRef(false);
 
   const budgetWarning = useBudgetWarning(budgetSnapshot, portfolioId, categoryId, date, amount);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    if (budgetWarning && !budgetAcknowledgedRef.current) {
-      e.preventDefault();
+    if (confirmedRef.current) return;
+    e.preventDefault();
+    if (budgetWarning) {
       setShowBudgetModal(true);
+      return;
+    }
+    if (window.confirm("Resubmit this expense for approval?")) {
+      confirmedRef.current = true;
+      formRef.current?.requestSubmit();
     }
   }
 
   function confirmOverBudgetSubmit() {
-    budgetAcknowledgedRef.current = true;
     setShowBudgetModal(false);
+    confirmedRef.current = true;
     formRef.current?.requestSubmit();
   }
 

@@ -56,6 +56,8 @@ scripts/*.env.local
 
 # account recovery codes - never commit
 /Recovery-Code
+/Recovery-Code.rar
+/Recovery-Code.zip
 
 # real filled-in bulk import data (contains actual expense records)
 /data

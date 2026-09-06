@@ -134,9 +134,16 @@ export async function actOnExpense(formData: FormData) {
     );
   }
 
+  const successMessage =
+    intent === "approve"
+      ? "Expense approved."
+      : intent === "return"
+        ? "Expense returned to the submitter."
+        : "Expense rejected.";
+
   revalidatePath("/approvals");
   revalidatePath("/expenses");
-  redirect("/approvals");
+  redirect(`/approvals?success=${encodeURIComponent(successMessage)}`);
 }
 
 export async function markAsPaid(formData: FormData) {
@@ -168,5 +175,5 @@ export async function markAsPaid(formData: FormData) {
 
   revalidatePath("/expenses");
   revalidatePath("/approvals");
-  redirect("/approvals");
+  redirect(`/approvals?success=${encodeURIComponent("Expense marked as paid.")}`);
 }

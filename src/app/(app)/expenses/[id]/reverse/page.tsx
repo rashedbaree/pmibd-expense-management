@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createReversal } from "../../actions";
+import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { REMARKS_MAX_LENGTH } from "@/lib/constants";
 
 export default async function ReverseExpensePage({
@@ -107,12 +108,12 @@ export default async function ReverseExpensePage({
               />
             </label>
             <div className="flex gap-3">
-              <button
-                type="submit"
+              <ConfirmSubmitButton
+                confirmMessage="Submit this reversal for approval?"
                 className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90"
               >
                 Submit Reversal
-              </button>
+              </ConfirmSubmitButton>
               <Link
                 href="/expenses"
                 className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
