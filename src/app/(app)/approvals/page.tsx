@@ -235,6 +235,7 @@ export default async function ApprovalsPage({
                 <ConfirmSubmitButton
                   name="intent"
                   value="approve"
+                  confirmTitle="Approve Expense"
                   confirmMessage="Approve this expense?"
                   className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                 >
@@ -243,6 +244,7 @@ export default async function ApprovalsPage({
                 <ConfirmSubmitButton
                   name="intent"
                   value="return"
+                  confirmTitle="Return Expense"
                   confirmMessage="Return this expense to the submitter for correction?"
                   className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-600"
                 >
@@ -251,7 +253,9 @@ export default async function ApprovalsPage({
                 <ConfirmSubmitButton
                   name="intent"
                   value="reject"
+                  confirmTitle="Reject Expense"
                   confirmMessage="Reject this expense? This cannot be undone."
+                  destructive
                   className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
                 >
                   Reject
@@ -301,6 +305,7 @@ export default async function ApprovalsPage({
                     </label>
                   )}
                   <ConfirmSubmitButton
+                    confirmTitle="Mark as Paid"
                     confirmMessage="Mark this expense as paid?"
                     className="rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700"
                   >

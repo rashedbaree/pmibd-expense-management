@@ -109,6 +109,7 @@ export default async function ReverseExpensePage({
             </label>
             <div className="flex gap-3">
               <ConfirmSubmitButton
+                confirmTitle="Submit Reversal"
                 confirmMessage="Submit this reversal for approval?"
                 className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90"
               >

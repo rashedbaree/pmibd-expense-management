@@ -8,6 +8,7 @@ import {
   BudgetWarningBanner,
   BudgetWarningModal,
 } from "@/components/BudgetWarning";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
 const PAYMENT_METHODS = [
@@ -65,6 +66,7 @@ export default function EditExpenseForm({
     defaults.remarks?.length ?? 0,
   );
   const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const confirmedRef = useRef(false);
@@ -76,12 +78,15 @@ export default function EditExpenseForm({
     e.preventDefault();
     if (budgetWarning) {
       setShowBudgetModal(true);
-      return;
+    } else {
+      setShowConfirmModal(true);
     }
-    if (window.confirm("Resubmit this expense for approval?")) {
-      confirmedRef.current = true;
-      formRef.current?.requestSubmit();
-    }
+  }
+
+  function confirmPlainSubmit() {
+    setShowConfirmModal(false);
+    confirmedRef.current = true;
+    formRef.current?.requestSubmit();
   }
 
   function confirmOverBudgetSubmit() {
@@ -303,6 +308,15 @@ export default function EditExpenseForm({
           Resubmit for Approval
         </button>
       </div>
+
+      {showConfirmModal && (
+        <ConfirmDialog
+          title="Resubmit Expense"
+          message="Resubmit this expense for approval?"
+          onCancel={() => setShowConfirmModal(false)}
+          onConfirm={confirmPlainSubmit}
+        />
+      )}
 
       {showBudgetModal && budgetWarning && (
         <BudgetWarningModal
