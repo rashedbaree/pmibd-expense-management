@@ -50,9 +50,10 @@ export default async function ExpensesPage({
       supabase.from("users").select("id, name").order("name"),
     ]);
 
-  const portfolios = scope.fullVisibility
-    ? (allPortfolios ?? [])
-    : (allPortfolios ?? []).filter((p) => p.id === profile.portfolio_id);
+  const portfolios =
+    scope.fullVisibility || scope.ownOnly
+      ? (allPortfolios ?? [])
+      : (allPortfolios ?? []).filter((p) => p.id === profile.portfolio_id);
 
   let query = supabase
     .from("expenses")

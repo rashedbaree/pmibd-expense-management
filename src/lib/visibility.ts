@@ -57,15 +57,21 @@ export async function getVisibilityScope(
  * Applies a VisibilityScope's portfolio/own-expense restriction to any
  * Supabase query builder for a table with `portfolio_id` and `submitted_by`
  * columns (or a join whose expenses row is filtered the same way).
+ *
+ * ownOnly (submitters) filters by submitted_by alone, not portfolio_id too -
+ * anyone can pick any portfolio when submitting an expense (see
+ * expenses/new/form.tsx), so an expense a submitter created isn't
+ * necessarily tied to their own profile's portfolio_id. Stacking both
+ * filters would hide a submitter's own expenses filed under a different
+ * portfolio, and would break entirely for a submitter with no portfolio_id
+ * assigned at all (portfolio_id is a uuid column - filtering it against the
+ * "__none__" sentinel throws rather than matching zero rows).
  */
 export function scopeExpenseQuery<T extends { eq: (column: string, value: string) => T }>(
   query: T,
   scope: VisibilityScope,
 ): T {
   if (scope.fullVisibility) return query;
-  let scoped = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
-  if (scope.ownOnly) {
-    scoped = scoped.eq("submitted_by", scope.userId ?? "__none__");
-  }
-  return scoped;
+  if (scope.ownOnly) return query.eq("submitted_by", scope.userId ?? "__none__");
+  return query.eq("portfolio_id", scope.portfolioId ?? "__none__");
 }
