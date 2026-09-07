@@ -7,7 +7,8 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/expenses", label: "Expenses" },
   { href: "/approvals", label: "Approvals" },
-  { href: "/reports", label: "Reports" },
+  { href: "/reports", label: "Reports", hideForSubmitter: true },
+  { href: "/reports/unpaid", label: "Unpaid Report", submitterOnly: true },
   { href: "/admin", label: "Admin", adminOnly: true },
 ];
 
@@ -21,9 +22,12 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
   const profile = await getCurrentProfile();
-  const navItems = NAV_ITEMS.filter(
-    (item) => !item.adminOnly || profile?.role === "admin",
-  );
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && profile?.role !== "admin") return false;
+    if (item.hideForSubmitter && profile?.role === "submitter") return false;
+    if (item.submitterOnly && profile?.role !== "submitter") return false;
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen flex-col">

@@ -23,7 +23,8 @@ export default async function UnpaidReportPage({
   const allowed =
     profile?.role === "finance_director" ||
     profile?.role === "president" ||
-    profile?.role === "admin";
+    profile?.role === "admin" ||
+    profile?.role === "submitter";
 
   if (!allowed) {
     return (
