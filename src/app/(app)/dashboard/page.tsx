@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { getVisibilityScope } from "@/lib/visibility";
+import { getVisibilityScope, isOwnOnlyScope } from "@/lib/visibility";
 import { signedAmount } from "@/lib/expense";
 import type { EntryType, ExpenseStatus } from "@/lib/types";
 
@@ -33,7 +33,9 @@ export default async function DashboardPage() {
        portfolio:portfolios(name),
        category:expense_categories(name)`,
     );
-  if (!scope.fullVisibility) {
+  if (isOwnOnlyScope(scope)) {
+    query = query.eq("submitted_by", profile.id);
+  } else if (!scope.fullVisibility) {
     query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
   }
 

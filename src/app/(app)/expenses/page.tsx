@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { getVisibilityScope } from "@/lib/visibility";
+import { getVisibilityScope, isOwnOnlyScope } from "@/lib/visibility";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { ExpenseStatus } from "@/lib/types";
 
@@ -50,9 +50,10 @@ export default async function ExpensesPage({
       supabase.from("users").select("id, name").order("name"),
     ]);
 
-  const portfolios = scope.fullVisibility
-    ? (allPortfolios ?? [])
-    : (allPortfolios ?? []).filter((p) => p.id === profile.portfolio_id);
+  const portfolios =
+    scope.fullVisibility || isOwnOnlyScope(scope)
+      ? (allPortfolios ?? [])
+      : (allPortfolios ?? []).filter((p) => p.id === profile.portfolio_id);
 
   let query = supabase
     .from("expenses")
@@ -64,7 +65,9 @@ export default async function ExpensesPage({
     )
     .order("date", { ascending: false });
 
-  if (!scope.fullVisibility) {
+  if (isOwnOnlyScope(scope)) {
+    query = query.eq("submitted_by", profile.id);
+  } else if (!scope.fullVisibility) {
     query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
   }
 

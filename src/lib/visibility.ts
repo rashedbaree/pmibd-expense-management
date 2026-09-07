@@ -5,13 +5,18 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 export type VisibilityScope =
   | { fullVisibility: true }
-  | { fullVisibility: false; portfolioId: string | null };
+  | { fullVisibility: false; portfolioId: string | null }
+  | { fullVisibility: false; ownOnly: true };
 
 /**
  * By default a user only sees expenses in their own portfolio. Admins
  * always see everything; beyond that, both specific roles (e.g. President)
  * and specific portfolios (e.g. Finance & Audit) can be marked in Admin ->
  * Expense Visibility to see every portfolio's expenses instead.
+ *
+ * Submitters are a special case: they have no single portfolio_id (they
+ * submit on behalf of any portfolio), so instead of a portfolio scope they
+ * get an "own submissions only" scope spanning every portfolio.
  */
 export async function getVisibilityScope(
   supabase: SupabaseClient,
@@ -19,6 +24,7 @@ export async function getVisibilityScope(
 ): Promise<VisibilityScope> {
   if (!profile) return { fullVisibility: false, portfolioId: null };
   if (profile.role === "admin") return { fullVisibility: true };
+  if (profile.role === "submitter") return { fullVisibility: false, ownOnly: true };
 
   const { data: roleRow } = await supabase
     .from("role_full_visibility")
@@ -37,4 +43,10 @@ export async function getVisibilityScope(
   }
 
   return { fullVisibility: false, portfolioId: profile.portfolio_id };
+}
+
+export function isOwnOnlyScope(
+  scope: VisibilityScope,
+): scope is { fullVisibility: false; ownOnly: true } {
+  return !scope.fullVisibility && "ownOnly" in scope && scope.ownOnly;
 }

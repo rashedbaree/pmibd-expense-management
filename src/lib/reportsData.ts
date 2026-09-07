@@ -1,5 +1,5 @@
 import type { createClient } from "./supabase/server";
-import type { VisibilityScope } from "./visibility";
+import { isOwnOnlyScope, type VisibilityScope } from "./visibility";
 import { signedAmount } from "./expense";
 import type { EntryType, ExpenseStatus } from "./types";
 
@@ -64,7 +64,12 @@ export async function getSpendBreakdown(
        event:events(name)`,
     )
     .order("date", { ascending: false });
-  if (!scope.fullVisibility) {
+  // Callers (Reports / Reports Overview) block the `submitter` role before
+  // reaching here, so an own-only scope is unreachable in practice - fall
+  // back to a no-match filter rather than mis-scoping a report by portfolio.
+  if (isOwnOnlyScope(scope)) {
+    query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+  } else if (!scope.fullVisibility) {
     query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
   }
   if (range.dateFrom) query = query.gte("date", range.dateFrom);
