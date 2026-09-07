@@ -1,5 +1,5 @@
 import type { createClient } from "./supabase/server";
-import type { VisibilityScope } from "./visibility";
+import { scopeExpenseQuery, type VisibilityScope } from "./visibility";
 import { signedAmount } from "./expense";
 import type { EntryType, ExpenseStatus } from "./types";
 
@@ -64,9 +64,7 @@ export async function getSpendBreakdown(
        event:events(name)`,
     )
     .order("date", { ascending: false });
-  if (!scope.fullVisibility) {
-    query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
-  }
+  query = scopeExpenseQuery(query, scope);
   if (range.dateFrom) query = query.gte("date", range.dateFrom);
   if (range.dateTo) query = query.lte("date", range.dateTo);
 

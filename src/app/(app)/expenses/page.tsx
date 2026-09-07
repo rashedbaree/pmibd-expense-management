@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { getVisibilityScope } from "@/lib/visibility";
+import { getVisibilityScope, scopeExpenseQuery } from "@/lib/visibility";
 import { StatusBadge } from "@/components/StatusBadge";
 import type { ExpenseStatus } from "@/lib/types";
 
@@ -64,9 +64,7 @@ export default async function ExpensesPage({
     )
     .order("date", { ascending: false });
 
-  if (!scope.fullVisibility) {
-    query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
-  }
+  query = scopeExpenseQuery(query, scope);
 
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.portfolio_id) query = query.eq("portfolio_id", filters.portfolio_id);
@@ -181,21 +179,23 @@ export default async function ExpensesPage({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1">
-          Submitter
-          <select
-            name="submitted_by"
-            defaultValue={filters.submitted_by ?? ""}
-            className={inputClass}
-          >
-            <option value="">All</option>
-            {(users ?? []).map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!(scope.fullVisibility === false && scope.ownOnly) && (
+          <label className="flex flex-col gap-1">
+            Submitter
+            <select
+              name="submitted_by"
+              defaultValue={filters.submitted_by ?? ""}
+              className={inputClass}
+            >
+              <option value="">All</option>
+              {(users ?? []).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <label className="flex flex-col gap-1">
           From

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
-import { getVisibilityScope } from "@/lib/visibility";
+import { getVisibilityScope, scopeExpenseQuery } from "@/lib/visibility";
 import type { ExpenseStatus } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -25,9 +25,7 @@ export async function GET(request: NextRequest) {
     )
     .order("date", { ascending: false });
 
-  if (!scope.fullVisibility) {
-    query = query.eq("portfolio_id", scope.portfolioId ?? "__none__");
-  }
+  query = scopeExpenseQuery(query, scope);
 
   const status = filters.get("status");
   const portfolioId = filters.get("portfolio_id");
