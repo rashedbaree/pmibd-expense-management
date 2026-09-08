@@ -12,6 +12,17 @@ import { checkBudget } from "@/lib/budget";
 import { notifyApprover } from "@/lib/notifications";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
 
+// Supabase's PostgrestError carries more than `message` - `details`/`hint`
+// usually name the specific constraint or RLS policy that failed, which is
+// what actually helps diagnose a rejected insert/update in production.
+function describeError(
+  error: { message: string; details?: string | null; hint?: string | null } | null,
+  fallback: string,
+): string {
+  if (!error) return fallback;
+  return [error.message, error.details, error.hint].filter(Boolean).join(" — ");
+}
+
 export async function createExpense(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -72,7 +83,7 @@ export async function createExpense(formData: FormData) {
 
   if (error || !expense) {
     redirect(
-      `/expenses/new?error=${encodeURIComponent(error?.message ?? "Failed to create expense")}`,
+      `/expenses/new?error=${encodeURIComponent(describeError(error, "Failed to create expense"))}`,
     );
   }
 
@@ -197,7 +208,7 @@ export async function createReversal(formData: FormData) {
 
   if (error || !reversal) {
     redirect(
-      `/expenses/${originalId}/reverse?error=${encodeURIComponent(error?.message ?? "Failed to create reversal")}`,
+      `/expenses/${originalId}/reverse?error=${encodeURIComponent(describeError(error, "Failed to create reversal"))}`,
     );
   }
 
@@ -297,7 +308,7 @@ export async function resubmitExpense(formData: FormData) {
 
   if (error) {
     redirect(
-      `/expenses/${expenseId}/edit?error=${encodeURIComponent(error.message)}`,
+      `/expenses/${expenseId}/edit?error=${encodeURIComponent(describeError(error, "Failed to resubmit expense"))}`,
     );
   }
 
