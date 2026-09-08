@@ -82,6 +82,14 @@ export async function createExpense(formData: FormData) {
     .single();
 
   if (error || !expense) {
+    console.error("[createExpense] insert failed", {
+      authUserId: user.id,
+      submitterProfileId: submitterProfile ? user.id : null,
+      submitterRole: submitterProfile?.role ?? null,
+      portfolio_id,
+      category_id,
+      error: error ? JSON.stringify(error) : null,
+    });
     redirect(
       `/expenses/new?error=${encodeURIComponent(describeError(error, "Failed to create expense"))}`,
     );
