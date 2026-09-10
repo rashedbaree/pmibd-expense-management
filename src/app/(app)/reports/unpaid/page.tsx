@@ -94,6 +94,7 @@ export default async function UnpaidReportPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <style>{`@page { size: landscape; margin: 12mm; }`}</style>
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
@@ -161,7 +162,17 @@ export default async function UnpaidReportPage({
           </p>
         </div>
 
-        <table className="mt-6 w-full text-sm">
+        <table className="mt-6 w-full table-fixed text-sm print:text-xs">
+          <colgroup>
+            <col className="w-[8%]" />
+            <col className="w-[11%]" />
+            <col className="w-[12%]" />
+            <col className="w-[27%]" />
+            <col className="w-[13%]" />
+            <col className="w-[13%]" />
+            <col className="w-[9%]" />
+            <col className="w-[7%]" />
+          </colgroup>
           <thead className="text-left text-xs uppercase text-zinc-500">
             <tr className="border-b border-zinc-300 dark:border-zinc-700">
               <th className="px-2 py-2">Date</th>
@@ -170,23 +181,33 @@ export default async function UnpaidReportPage({
               <th className="px-2 py-2">Description</th>
               <th className="px-2 py-2">Submitter</th>
               <th className="px-2 py-2">Vendor</th>
-              <th className="px-2 py-2">Payment Method</th>
-              <th className="px-2 py-2 text-right">Amount (BDT)</th>
+              <th className="px-2 py-2">Payment</th>
+              <th className="px-2 py-2 text-right">Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {rows.map((r) => (
               <tr key={r.id}>
-                <td className="px-2 py-1.5 whitespace-nowrap">{r.date}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap">{r.portfolio}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap">{r.category}</td>
-                <td className="px-2 py-1.5">{r.description}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap">{r.submitter}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap">{r.vendor}</td>
-                <td className="px-2 py-1.5 whitespace-nowrap capitalize">
+                <td className="truncate px-2 py-1 whitespace-nowrap">{r.date}</td>
+                <td className="truncate px-2 py-1" title={r.portfolio}>
+                  {r.portfolio}
+                </td>
+                <td className="truncate px-2 py-1" title={r.category}>
+                  {r.category}
+                </td>
+                <td className="truncate px-2 py-1" title={r.description}>
+                  {r.description}
+                </td>
+                <td className="truncate px-2 py-1" title={r.submitter}>
+                  {r.submitter}
+                </td>
+                <td className="truncate px-2 py-1" title={r.vendor}>
+                  {r.vendor}
+                </td>
+                <td className="truncate px-2 py-1 capitalize">
                   {r.paymentMethod.replace("_", " ")}
                 </td>
-                <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                <td className="truncate px-2 py-1 text-right whitespace-nowrap">
                   {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
               </tr>
