@@ -159,11 +159,17 @@ export async function markAsPaid(formData: FormData) {
     ? chequeNumberRaw.slice(0, CHEQUE_NUMBER_MAX_LENGTH)
     : null;
 
-  await supabase
+  const { error } = await supabase
     .from("expenses")
     .update({ status: "paid", cheque_number })
     .eq("id", expenseId)
     .eq("status", "approved");
+
+  if (error) {
+    redirect(
+      `/approvals?error=${encodeURIComponent([error.message, error.details, error.hint].filter(Boolean).join(" — "))}`,
+    );
+  }
 
   await supabase.from("audit_log").insert({
     entity_type: "expense",
