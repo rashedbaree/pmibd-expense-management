@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { describeError } from "@/lib/supabase/errors";
 import {
   getApprovalChain,
   startApproval,
@@ -11,17 +12,6 @@ import {
 import { checkBudget } from "@/lib/budget";
 import { notifyApprover } from "@/lib/notifications";
 import { DESCRIPTION_MAX_LENGTH, REMARKS_MAX_LENGTH } from "@/lib/constants";
-
-// Supabase's PostgrestError carries more than `message` - `details`/`hint`
-// usually name the specific constraint or RLS policy that failed, which is
-// what actually helps diagnose a rejected insert/update in production.
-function describeError(
-  error: { message: string; details?: string | null; hint?: string | null } | null,
-  fallback: string,
-): string {
-  if (!error) return fallback;
-  return [error.message, error.details, error.hint].filter(Boolean).join(" — ");
-}
 
 export async function createExpense(formData: FormData) {
   const supabase = await createClient();
