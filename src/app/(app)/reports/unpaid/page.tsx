@@ -94,7 +94,12 @@ export default async function UnpaidReportPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <style>{`@page { size: landscape; margin: 12mm; }`}</style>
+      <style>{`
+        @page { size: landscape; margin: 12mm; }
+        @media print and (prefers-color-scheme: dark) {
+          #unpaid-report, #unpaid-report * { color: #200f3b; }
+        }
+      `}</style>
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
@@ -149,7 +154,10 @@ export default async function UnpaidReportPage({
         </p>
       )}
 
-      <div className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800 print:border-0 print:p-0">
+      <div
+        id="unpaid-report"
+        className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800 print:border-0 print:p-0"
+      >
         <div className="text-center">
           <p className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
             PMI Bangladesh Chapter
@@ -166,12 +174,12 @@ export default async function UnpaidReportPage({
           <colgroup>
             <col className="w-[8%]" />
             <col className="w-[11%]" />
+            <col className="w-[13%]" />
+            <col className="w-[21%]" />
+            <col className="w-[11%]" />
+            <col className="w-[13%]" />
+            <col className="w-[11%]" />
             <col className="w-[12%]" />
-            <col className="w-[27%]" />
-            <col className="w-[13%]" />
-            <col className="w-[13%]" />
-            <col className="w-[9%]" />
-            <col className="w-[7%]" />
           </colgroup>
           <thead className="text-left text-xs uppercase text-zinc-500">
             <tr className="border-b border-zinc-300 dark:border-zinc-700">
@@ -207,7 +215,7 @@ export default async function UnpaidReportPage({
                 <td className="truncate px-2 py-1 capitalize">
                   {r.paymentMethod.replace("_", " ")}
                 </td>
-                <td className="truncate px-2 py-1 text-right whitespace-nowrap">
+                <td className="px-2 py-1 text-right whitespace-nowrap">
                   {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
               </tr>
@@ -225,14 +233,14 @@ export default async function UnpaidReportPage({
               <td colSpan={7} className="px-2 py-2 text-right">
                 Total
               </td>
-              <td className="px-2 py-2 text-right">
+              <td className="px-2 py-2 text-right whitespace-nowrap">
                 {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </td>
             </tr>
           </tfoot>
         </table>
 
-        <div className="mt-16 grid grid-cols-2 gap-12 text-sm">
+        <div className="mt-16 grid grid-cols-2 gap-12 text-sm break-inside-avoid">
           <div>
             <div className="border-t border-zinc-400 pt-2 dark:border-zinc-600">
               Finance Director — Signature &amp; Date
