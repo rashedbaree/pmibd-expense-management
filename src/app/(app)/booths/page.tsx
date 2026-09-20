@@ -87,11 +87,16 @@ export default async function BoothsPage({
 
   const bookings = ((rawBookings ?? []) as unknown as BookingRow[]).map((b) => {
     const received = totalReceived(b.payments);
+    const live = countsAsRevenue(b.status);
     return {
       ...b,
       received,
-      due: outstanding(b.amount, received),
-      state: paymentState(b.amount, received),
+      live,
+      // A cancelled booth is owed nothing, so it carries no balance and no
+      // payment state - showing "Unpaid · 45,000 outstanding" against one
+      // reads as a debt that nobody is chasing.
+      due: live ? outstanding(b.amount, received) : 0,
+      state: live ? paymentState(b.amount, received) : null,
     };
   });
 
@@ -102,7 +107,7 @@ export default async function BoothsPage({
     : bookings;
 
   // A cancelled booking is neither revenue nor a receivable.
-  const live = rows.filter((b) => countsAsRevenue(b.status));
+  const live = rows.filter((b) => b.live);
   const totalBooked = live.reduce((sum, b) => sum + Number(b.amount), 0);
   const totalReceivedAll = live.reduce((sum, b) => sum + b.received, 0);
   const totalDue = live.reduce((sum, b) => sum + b.due, 0);
@@ -265,10 +270,10 @@ export default async function BoothsPage({
                   {formatAmount(b.received)}
                 </td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
-                  {formatAmount(b.due)}
+                  {b.live ? formatAmount(b.due) : "—"}
                 </td>
                 <td className="px-3 py-2">
-                  <BoothPaymentBadge state={b.state} />
+                  {b.state ? <BoothPaymentBadge state={b.state} /> : "—"}
                 </td>
                 <td className="px-3 py-2">
                   <BoothStatusBadge status={b.status} />

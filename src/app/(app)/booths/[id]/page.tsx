@@ -95,12 +95,14 @@ export default async function BoothBookingPage({
     a.date < b.date ? 1 : -1,
   );
   const received = totalReceived(payments);
-  const due = outstanding(booking.amount, received);
-  const state = paymentState(booking.amount, received);
+  const isCancelled = booking.status === "cancelled";
+  // Nothing is owed on a cancelled booth, so it shows no balance and no
+  // payment state rather than a debt nobody is chasing.
+  const due = isCancelled ? 0 : outstanding(booking.amount, received);
+  const state = isCancelled ? null : paymentState(booking.amount, received);
 
   const isFinance =
     profile.role === "finance_director" || profile.role === "admin";
-  const isCancelled = booking.status === "cancelled";
   const canConfirm = isFinance && booking.status === "reserved";
   const canCancel =
     !isCancelled &&
@@ -129,7 +131,7 @@ export default async function BoothBookingPage({
             {booking.organization_name}
           </h1>
           <BoothStatusBadge status={booking.status} />
-          <BoothPaymentBadge state={state} />
+          {state && <BoothPaymentBadge state={state} />}
         </div>
       </div>
 
@@ -146,9 +148,9 @@ export default async function BoothBookingPage({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          { label: "Booked", value: booking.amount },
-          { label: "Received", value: received },
-          { label: "Outstanding", value: due },
+          { label: "Booked", value: formatAmount(booking.amount) },
+          { label: "Received", value: formatAmount(received) },
+          { label: "Outstanding", value: isCancelled ? "—" : formatAmount(due) },
         ].map((card) => (
           <div
             key={card.label}
@@ -156,7 +158,7 @@ export default async function BoothBookingPage({
           >
             <p className="text-xs uppercase text-zinc-500">{card.label}</p>
             <p className="text-xl font-semibold text-zinc-950 dark:text-zinc-50">
-              {formatAmount(card.value)}
+              {card.value}
             </p>
           </div>
         ))}

@@ -24,7 +24,8 @@ export function paymentState(
   return "partial";
 }
 
-// A cancelled booking isn't revenue, so it never counts toward a total.
+// A cancelled booking isn't revenue, so it never counts toward a total - and
+// nothing is owed on it either, however little was paid before it fell through.
 export function countsAsRevenue(status: BoothBookingStatus): boolean {
   return status !== "cancelled";
 }
