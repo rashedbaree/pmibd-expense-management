@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
   const status = filters.get("status");
   const portfolioId = filters.get("portfolio_id");
   const categoryId = filters.get("category_id");
+  const eventId = filters.get("event_id");
   const submittedBy = filters.get("submitted_by");
   const dateFrom = filters.get("date_from");
   const dateTo = filters.get("date_to");
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
   if (status) query = query.eq("status", status as ExpenseStatus);
   if (portfolioId) query = query.eq("portfolio_id", portfolioId);
   if (categoryId) query = query.eq("category_id", categoryId);
+  if (eventId) query = query.eq("event_id", eventId);
   if (submittedBy) query = query.eq("submitted_by", submittedBy);
   if (dateFrom) query = query.gte("date", dateFrom);
   if (dateTo) query = query.lte("date", dateTo);

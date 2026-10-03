@@ -23,6 +23,7 @@ type SearchParams = {
   status?: string;
   portfolio_id?: string;
   category_id?: string;
+  event_id?: string;
   submitted_by?: string;
   date_from?: string;
   date_to?: string;
@@ -43,17 +44,38 @@ export default async function ExpensesPage({
 
   const scope = await getVisibilityScope(supabase, profile);
 
-  const [{ data: allPortfolios }, { data: categories }, { data: users }] =
-    await Promise.all([
-      supabase.from("portfolios").select("id, name").order("name"),
-      supabase.from("expense_categories").select("id, name").order("name"),
-      supabase.from("users").select("id, name").order("name"),
-    ]);
+  const [
+    { data: allPortfolios },
+    { data: categories },
+    { data: users },
+    { data: rawEvents },
+  ] = await Promise.all([
+    supabase.from("portfolios").select("id, name").order("name"),
+    supabase.from("expense_categories").select("id, name").order("name"),
+    supabase.from("users").select("id, name").order("name"),
+    supabase
+      .from("events")
+      .select("id, name, portfolio_id, portfolio:portfolios(name)")
+      .order("name"),
+  ]);
 
   const portfolios =
     scope.fullVisibility || scope.ownOnly
       ? (allPortfolios ?? [])
       : (allPortfolios ?? []).filter((p) => p.id === profile.portfolio_id);
+
+  const allEvents = (rawEvents ?? []) as unknown as {
+    id: string;
+    name: string;
+    portfolio_id: string;
+    portfolio: { name: string } | null;
+  }[];
+  // Same visibility rule as the portfolio dropdown: people limited to their
+  // own portfolio only get that portfolio's events to pick from.
+  const events =
+    scope.fullVisibility || scope.ownOnly
+      ? allEvents
+      : allEvents.filter((e) => e.portfolio_id === profile.portfolio_id);
 
   let query = supabase
     .from("expenses")
@@ -70,6 +92,7 @@ export default async function ExpensesPage({
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.portfolio_id) query = query.eq("portfolio_id", filters.portfolio_id);
   if (filters.category_id) query = query.eq("category_id", filters.category_id);
+  if (filters.event_id) query = query.eq("event_id", filters.event_id);
   if (filters.submitted_by) query = query.eq("submitted_by", filters.submitted_by);
   if (filters.date_from) query = query.gte("date", filters.date_from);
   if (filters.date_to) query = query.lte("date", filters.date_to);
@@ -106,6 +129,7 @@ export default async function ExpensesPage({
   if (filters.status) exportParams.set("status", filters.status);
   if (filters.portfolio_id) exportParams.set("portfolio_id", filters.portfolio_id);
   if (filters.category_id) exportParams.set("category_id", filters.category_id);
+  if (filters.event_id) exportParams.set("event_id", filters.event_id);
   if (filters.submitted_by) exportParams.set("submitted_by", filters.submitted_by);
   if (filters.date_from) exportParams.set("date_from", filters.date_from);
   if (filters.date_to) exportParams.set("date_to", filters.date_to);
@@ -175,6 +199,22 @@ export default async function ExpensesPage({
             {(categories ?? []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1">
+          Event / Initiative
+          <select
+            name="event_id"
+            defaultValue={filters.event_id ?? ""}
+            className={inputClass}
+          >
+            <option value="">All</option>
+            {events.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.portfolio?.name ? `${e.name} (${e.portfolio.name})` : e.name}
               </option>
             ))}
           </select>
