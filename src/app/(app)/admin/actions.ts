@@ -170,3 +170,59 @@ export async function moveApprovalStep(formData: FormData) {
 
   revalidatePath("/admin/approval-flow");
 }
+
+export async function addBoothPackage(formData: FormData) {
+  const supabase = await createClient();
+  const event_id = formData.get("event_id") as string;
+  const name = (formData.get("name") as string).trim();
+  const price = Number(String(formData.get("price") ?? "").replace(/,/g, ""));
+  const totalRaw = String(formData.get("total_booths") ?? "").trim();
+  const total_booths = totalRaw ? Number(totalRaw) : null;
+
+  if (!event_id || !name) {
+    redirect(
+      `/admin/booth-packages?error=${encodeURIComponent("Event and name are both required.")}`,
+    );
+  }
+  if (!Number.isFinite(price) || price < 0) {
+    redirect(
+      `/admin/booth-packages?error=${encodeURIComponent("Enter a price of zero or more.")}`,
+    );
+  }
+  if (total_booths !== null && (!Number.isInteger(total_booths) || total_booths < 1)) {
+    redirect(
+      `/admin/booth-packages?error=${encodeURIComponent("Leave the booth count blank, or enter a whole number of 1 or more.")}`,
+    );
+  }
+
+  const { error } = await supabase
+    .from("booth_packages")
+    .insert({ event_id, name, price, total_booths });
+
+  if (error) {
+    redirect(`/admin/booth-packages?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/admin/booth-packages");
+  revalidatePath("/booths/new");
+}
+
+export async function deleteBoothPackage(formData: FormData) {
+  const supabase = await createClient();
+  const id = formData.get("id") as string;
+
+  const { error } = await supabase.from("booth_packages").delete().eq("id", id);
+
+  // A package that bookings already point at can't be removed - the
+  // foreign key holds it, which is what keeps an agreed price traceable.
+  if (error) {
+    redirect(
+      `/admin/booth-packages?error=${encodeURIComponent(
+        "This package can't be removed while bookings still reference it.",
+      )}`,
+    );
+  }
+
+  revalidatePath("/admin/booth-packages");
+  revalidatePath("/booths/new");
+}

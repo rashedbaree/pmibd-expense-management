@@ -111,3 +111,40 @@ export interface ExpenseApproval {
   comment: string | null;
   acted_at: string;
 }
+
+export type BoothBookingStatus = "reserved" | "confirmed" | "cancelled";
+
+export interface BoothPackage {
+  id: string;
+  event_id: string;
+  name: string;
+  price: number;
+  total_booths: number | null;
+}
+
+export interface BoothBooking {
+  id: string;
+  event_id: string;
+  package_id: string | null;
+  organization_name: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string | null;
+  booth_number: string | null;
+  amount: number;
+  status: BoothBookingStatus;
+  remarks: string | null;
+  registered_by: string;
+  created_at: string;
+}
+
+export interface BoothPayment {
+  id: string;
+  booking_id: string;
+  date: string;
+  amount: number;
+  method: PaymentMethod;
+  reference: string | null;
+  remarks: string | null;
+  created_at: string;
+}

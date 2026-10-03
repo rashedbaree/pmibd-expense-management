@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { describeError } from "@/lib/supabase/errors";
 import {
   getApprovalChain,
   nextApproverRole,
@@ -167,7 +168,7 @@ export async function markAsPaid(formData: FormData) {
 
   if (error) {
     redirect(
-      `/approvals?error=${encodeURIComponent([error.message, error.details, error.hint].filter(Boolean).join(" — "))}`,
+      `/approvals?error=${encodeURIComponent(describeError(error, "Failed to update the expense"))}`,
     );
   }
 

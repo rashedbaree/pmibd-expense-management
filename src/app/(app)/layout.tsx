@@ -6,6 +6,7 @@ import { signOut } from "./actions";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/expenses", label: "Expenses" },
+  { href: "/booths", label: "Booths" },
   { href: "/approvals", label: "Approvals" },
   { href: "/reports", label: "Reports" },
   { href: "/event-checkin", label: "Event check in", adminOnly: true },
