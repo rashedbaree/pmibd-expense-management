@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/expenses", label: "Expenses" },
   { href: "/approvals", label: "Approvals" },
   { href: "/reports", label: "Reports" },
+  { href: "/event-checkin", label: "Event check in", adminOnly: true },
   { href: "/admin", label: "Admin", adminOnly: true },
 ];
 
